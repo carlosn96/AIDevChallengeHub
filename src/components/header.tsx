@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User as UserIcon } from "lucide-react";
-import { useUser, useAuth } from "@/firebase";
-import { signOut } from "firebase/auth";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { handleSignOut } from "@/firebase/auth/google-auth";
 
 const Logo = () => (
     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -23,12 +23,10 @@ const Logo = () => (
   );
   
 export default function Header() {
-  const { user } = useUser();
-  const auth = useAuth();
+  const { user } = useCurrentUser();
   
-  const handleLogout = async () => {
-    if (!auth) return;
-    await signOut(auth);
+  const onLogout = async () => {
+    await handleSignOut();
   };
 
   return (
@@ -63,7 +61,7 @@ export default function Header() {
                   <span>Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Logout</span>
                 </DropdownMenuItem>

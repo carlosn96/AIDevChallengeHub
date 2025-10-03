@@ -1,13 +1,13 @@
 'use client';
 
-import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LoadingScreen } from '@/components/loading-screen';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser();
+  const { user, loading } = useCurrentUser();
   const router = useRouter();
 
   useEffect(() => {

@@ -1,12 +1,14 @@
 'use client';
-import { signInWithPopup, GoogleAuthProvider, signOut, type Auth } from "firebase/auth";
+import { signInWithPopup, signOut } from "firebase/auth";
+import { auth, provider } from '@/lib/firebase';
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
-export const handleGoogleSignIn = async (auth: Auth) => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-
+export const handleGoogleSignIn = async () => {
+    if (!auth || !provider) {
+        throw new Error("Firebase has not been initialized correctly.");
+    }
+    
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
@@ -29,7 +31,10 @@ export const handleGoogleSignIn = async (auth: Auth) => {
     }
 };
 
-export const handleSignOut = async (auth: Auth) => {
+export const handleSignOut = async () => {
+    if (!auth) {
+        throw new Error("Firebase has not been initialized correctly.");
+    }
     try {
         await signOut(auth);
     } catch (error) {

@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { handleGoogleSignIn } from '@/firebase/auth/google-auth';
-import { useUser, useAuth, useFirebase } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '@/lib/firebase';
+
 
 const Logo = () => (
   <div className="inline-block p-4 rounded-full card-glass mb-6">
@@ -15,9 +17,8 @@ const Logo = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading } = useUser();
-  const auth = useAuth();
-  const { error: firebaseError } = useFirebase();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
   const router = useRouter();
@@ -38,25 +39,35 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
+    if (!auth) {
+      setLoading(false);
+      return;
     }
-  }, [user, router]);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+      if (user) {
+        router.push('/dashboard');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const onSignIn = async () => {
     if (!auth) return;
     setIsSigningIn(true);
     setSignInError(null);
     try {
-      await handleGoogleSignIn(auth);
-      // The onAuthStateChanged listener in useUser will handle navigation
+      await handleGoogleSignIn();
+      // The onAuthStateChanged listener will handle navigation
     } catch (e: any) {
       setSignInError(e.message);
       setIsSigningIn(false);
     }
   };
-
-  const displayError = signInError || firebaseError;
+  
+  const displayError = signInError || (!isFirebaseConfigured ? "Firebase configuration is missing." : null);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
