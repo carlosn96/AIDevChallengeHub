@@ -1,6 +1,6 @@
 'use client';
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -12,13 +12,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const configValues = Object.values(firebaseConfig);
-export const isFirebaseConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-let provider: GoogleAuthProvider;
+const configValues = Object.values(firebaseConfig);
+const isFirebaseConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
 
 if (isFirebaseConfigured) {
     if (getApps().length === 0) {
@@ -27,23 +26,22 @@ if (isFirebaseConfigured) {
         app = getApp();
     }
     
-    auth = getAuth(app);
-    db = getFirestore(app);
-    provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-        prompt: 'select_account',
-    });
+    if (app) {
+        auth = getAuth(app);
+        db = getFirestore(app);
 
-    if (typeof window !== 'undefined') {
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn("Firestore persistence failed to enable due to multiple tabs.");
-            } else if (err.code === 'unimplemented') {
-                console.warn("Firestore persistence is not supported in this browser.");
+        if (typeof window !== 'undefined') {
+            try {
+                enableIndexedDbPersistence(db);
+            } catch (err: any) {
+                 if (err.code === 'failed-precondition') {
+                    console.warn("Firestore persistence failed to enable due to multiple tabs.");
+                } else if (err.code === 'unimplemented') {
+                    console.warn("Firestore persistence is not supported in this browser.");
+                }
             }
-        });
+        }
     }
 }
 
-
-export { app, auth, db, provider };
+export { app, auth, db, isFirebaseConfigured };

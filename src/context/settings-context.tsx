@@ -39,7 +39,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isFirebaseConfigured || !auth) {
         setIsLoading(false);
         return;
     }
@@ -50,7 +50,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             const userRole = firebaseUser.email ? getUserRole(firebaseUser.email) : null;
             setRole(userRole);
 
-            if (userRole === 'Student') {
+            if (userRole === 'Student' && db) {
               await findOrCreateUser(firebaseUser);
             }
         } else {
@@ -63,7 +63,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
-    if (!isFirebaseConfigured) {
+    if (!isFirebaseConfigured || !auth) {
         setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
         return;
     }
@@ -109,7 +109,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !auth) return;
     try {
       await signOut(auth);
       clearUserData();
