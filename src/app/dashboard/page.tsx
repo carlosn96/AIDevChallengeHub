@@ -1,42 +1,35 @@
 'use client';
 
-import { teams, users as staticUsers, type Team } from '@/lib/data';
-import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
+import StudentDashboard from '@/components/student-dashboard';
 import { useSettings } from '@/context/settings-context';
+import { LoadingScreen } from '@/components/loading-screen';
 
 export default function DashboardPage() {
-  const { user } = useSettings();
+  const { user, role, isLoading } = useSettings();
 
-  // This is a simulation. In a real app, you'd fetch this from your backend based on the logged-in user.
-  // For now, we'll just use the first static user and find their team.
-  const currentUser = staticUsers[0];
-  const myTeam: Team | undefined = teams.find(team => team.memberIds.includes(currentUser.id));
+  if (isLoading || !user || !role) {
+    return <LoadingScreen />;
+  }
 
-  if (!myTeam) {
-    // This case should ideally not happen with automatic team assignment
+  // Render the appropriate dashboard based on the user's role
+  if (role === 'Alumno') {
+    return <StudentDashboard />;
+  }
+  
+  if (role === 'Docente' || role === 'Administrativo') {
     return (
-      <div>
-        <h1 className="text-2xl font-bold">Error</h1>
-        <p>No se pudo encontrar tu equipo. Por favor, contacta a un administrador.</p>
+      <div className="w-full">
+        <ScheduleDashboard />
       </div>
     );
   }
 
-  const teamMembers = staticUsers.filter(user => myTeam.memberIds.includes(user.id));
-
-  if (!user) {
-    return null; // or a loading indicator
-  }
-
+  // Fallback for any other case or if role is null
   return (
-    <div className="grid gap-4 md:gap-8 lg:grid-cols-3 xl:grid-cols-4">
-      <div className="lg:col-span-1 xl:col-span-1">
-        <TeamCard team={myTeam} members={teamMembers} />
-      </div>
-      <div className="lg:col-span-2 xl:col-span-3">
-        <ScheduleDashboard />
-      </div>
+    <div>
+      <h1 className="text-2xl font-bold">Acceso no configurado</h1>
+      <p>Tu rol no tiene una vista de dashboard configurada. Por favor, contacta a un administrador.</p>
     </div>
   );
 }

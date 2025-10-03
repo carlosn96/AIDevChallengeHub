@@ -1,5 +1,4 @@
 import type { Team, User } from "@/lib/data";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import {
   Card,
   CardContent,
@@ -14,9 +13,10 @@ import { Users } from "lucide-react";
 type TeamCardProps = {
   team: Team;
   members: User[];
+  currentUserId: string;
 };
 
-export default function TeamCard({ team, members }: TeamCardProps) {
+export default function TeamCard({ team, members, currentUserId }: TeamCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -33,28 +33,18 @@ export default function TeamCard({ team, members }: TeamCardProps) {
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">Miembros del equipo:</p>
         <ul className="space-y-3">
-          {members.map((member) => {
-            const avatar = PlaceHolderImages.find(
-              (img) => img.id === member.avatarId
-            );
-            return (
+          {members.map((member) => (
               <li key={member.id} className="flex items-center gap-3">
                 <Avatar className="h-9 w-9">
-                  {avatar && (
-                    <AvatarImage src={avatar.imageUrl} alt={member.name} />
-                  )}
-                  <AvatarFallback>
-                    {member.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
+                    {member.avatarUrl && <AvatarImage src={member.avatarUrl} alt={member.name} />}
+                    <AvatarFallback>
+                        {member.name.split(" ").map((n) => n[0]).join("")}
+                    </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{member.name}</span>
-                {member.id === "user-1" && <Badge variant="outline">Tú</Badge>}
+                {member.id === currentUserId && <Badge variant="outline">Tú</Badge>}
               </li>
-            );
-          })}
+          ))}
         </ul>
       </CardContent>
     </Card>

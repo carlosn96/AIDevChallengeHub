@@ -3,7 +3,7 @@ import { addDays, addHours, startOfDay } from 'date-fns';
 export type User = {
   id: string;
   name: string;
-  avatarId: string;
+  avatarUrl: string;
 };
 
 export type Team = {
@@ -23,15 +23,28 @@ export type ScheduleEvent = {
   location: string;
 };
 
+// Placeholder avatars from Unsplash
+const userAvatars = [
+    "https://images.unsplash.com/photo-1521119989659-a83eee488004?q=80&w=400",
+    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400",
+    "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=400",
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400",
+    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400",
+    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400",
+    "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400",
+    "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=400"
+];
+
+
 export const users: User[] = [
-  { id: 'user-1', name: 'Elena Rodriguez', avatarId: 'user-1' },
-  { id: 'user-2', name: 'Ben Carter', avatarId: 'user-2' },
-  { id: 'user-3', name: 'Aisha Khan', avatarId: 'user-3' },
-  { id: 'user-4', name: 'Kenji Tanaka', avatarId: 'user-4' },
-  { id: 'user-5', name: 'Sofia Rossi', avatarId: 'user-5' },
-  { id: 'user-6', name: 'David Chen', avatarId: 'user-6' },
-  { id: 'user-7', name: 'Fatima Al-Jamil', avatarId: 'user-7' },
-  { id: 'user-8', name: 'Liam Murphy', avatarId: 'user-8' },
+  { id: 'user-1', name: 'Elena Rodriguez', avatarUrl: userAvatars[0] },
+  { id: 'user-2', name: 'Ben Carter', avatarUrl: userAvatars[1] },
+  { id: 'user-3', name: 'Aisha Khan', avatarUrl: userAvatars[2] },
+  { id: 'user-4', name: 'Kenji Tanaka', avatarUrl: userAvatars[3] },
+  { id: 'user-5', name: 'Sofia Rossi', avatarUrl: userAvatars[4] },
+  { id: 'user-6', name: 'David Chen', avatarUrl: userAvatars[5] },
+  { id: 'user-7', name: 'Fatima Al-Jamil', avatarUrl: userAvatars[6] },
+  { id: 'user-8', name: 'Liam Murphy', avatarUrl: userAvatars[7] },
 ];
 
 export const teams: Team[] = [
