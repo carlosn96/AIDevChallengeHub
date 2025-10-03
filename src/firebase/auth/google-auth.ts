@@ -4,7 +4,8 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/
 const ALLOWED_DOMAIN = "universidad-une.com";
 
 export const handleGoogleSignIn = async () => {
-    const auth = getAuth(); // Get auth instance on demand. It uses the initialized app from the provider.
+    // getAuth() will now correctly use the initialized app from the provider context.
+    const auth = getAuth(); 
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -12,8 +13,9 @@ export const handleGoogleSignIn = async () => {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
+        // Domain validation
         if (user.email && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-            await signOut(auth);
+            await signOut(auth); // Sign out the user immediately if domain is not allowed
             throw new Error(`Access denied. Only emails from @${ALLOWED_DOMAIN} are allowed.`);
         }
         
@@ -24,13 +26,13 @@ export const handleGoogleSignIn = async () => {
             return null;
         }
         console.error("Google Sign-In Error:", error);
-        // Re-throw a more user-friendly error message
+        // Re-throw a more user-friendly error message to be displayed in the UI
         throw new Error(error.message || "An unknown error occurred during sign-in.");
     }
 };
 
 export const handleSignOut = async () => {
-    const auth = getAuth(); // Get auth instance on demand
+    const auth = getAuth();
     try {
         await signOut(auth);
     } catch (error) {
