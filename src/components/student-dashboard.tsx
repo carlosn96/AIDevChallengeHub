@@ -18,7 +18,7 @@ export default function StudentDashboard() {
   const myTeam: Team | undefined = teams.find(team => team.id === userProfile?.teamId);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db) return;
     
     const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
       if (doc.exists()) {
