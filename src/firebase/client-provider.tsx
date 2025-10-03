@@ -31,8 +31,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     try {
       const config = getFirebaseConfig();
-      const apps = getApps();
-      const app = !apps.length ? initializeApp(config) : apps[0];
+      const app = getApps().length ? getApps()[0] : initializeApp(config);
       const auth = getAuth(app);
       const firestore = getFirestore(app);
       
@@ -49,7 +48,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 
       return () => unsubscribe();
     } catch (e: any) {
-      console.error("Firebase Initialization Error:", e.message);
+      console.error("Firebase Initialization Error:", e);
       setError(e.message);
       setLoading(false);
     }

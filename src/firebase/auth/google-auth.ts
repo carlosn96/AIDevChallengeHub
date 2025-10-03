@@ -4,7 +4,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/
 const ALLOWED_DOMAIN = "universidad-une.com";
 
 export const handleGoogleSignIn = async () => {
-    const auth = getAuth(); // Get auth instance on demand
+    const auth = getAuth(); // Get auth instance on demand. It uses the initialized app from the provider.
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -25,7 +25,7 @@ export const handleGoogleSignIn = async () => {
         }
         console.error("Google Sign-In Error:", error);
         // Re-throw a more user-friendly error message
-        throw new Error(error.customData?._tokenResponse?.error_description || error.message || "An unknown error occurred during sign-in.");
+        throw new Error(error.message || "An unknown error occurred during sign-in.");
     }
 };
 
