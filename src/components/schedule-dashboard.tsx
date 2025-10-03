@@ -48,6 +48,14 @@ const eventTypeColors: { [key: string]: string } = {
   ceremony: 'bg-green-500/20 text-green-400 border-green-500/30',
 };
 
+const typeTranslations : {[key: string]: string} = {
+  'all': 'Todos los tipos',
+  'conference': 'Conferencia',
+  'workshop': 'Taller',
+  'challenge': 'Reto',
+  'ceremony': 'Ceremonia',
+ }
+
 const EventCard = ({ event, isLive, isUpcoming }: { event: ScheduleEvent, isLive: boolean, isUpcoming: boolean }) => {
   return (
     <Card className={`transition-all hover:shadow-primary/20 hover:shadow-lg ${isLive ? 'border-primary shadow-primary/20' : ''}`}>
@@ -56,7 +64,7 @@ const EventCard = ({ event, isLive, isUpcoming }: { event: ScheduleEvent, isLive
             <div>
                 <Badge className={`mb-2 ${eventTypeColors[event.type]}`}>
                 {eventTypeIcons[event.type]}
-                <span className="ml-2">{event.type}</span>
+                <span className="ml-2">{typeTranslations[event.type]}</span>
                 </Badge>
                 <CardTitle>{event.title}</CardTitle>
             </div>
@@ -130,14 +138,6 @@ export default function ScheduleDashboard() {
     'Day 3': 'Día 3',
   }
 
-  const typeTranslations : {[key: string]: string} = {
-    'all': 'Todos los tipos',
-    'conference': 'Conferencia',
-    'workshop': 'Taller',
-    'challenge': 'Reto',
-    'ceremony': 'Ceremonia',
-   }
-
   return (
     <Card>
       <CardHeader>
@@ -185,7 +185,7 @@ export default function ScheduleDashboard() {
                   {filteredSchedule.map((event) => (
                     <EventCard 
                         key={event.id} 
-                        event={{...event, type: typeTranslations[event.type] as any}}
+                        event={event}
                         isLive={liveState.liveIds.has(event.id)}
                         isUpcoming={liveState.upcomingIds.has(event.id)}
                     />

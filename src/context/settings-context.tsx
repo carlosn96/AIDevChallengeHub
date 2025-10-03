@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 
@@ -9,11 +9,12 @@ import { getUserRole, type UserRole } from '@/lib/roles';
 const DUMMY_USER: User = {
   uid: 'dev-user-id',
   email: 'dev.user@universidad-une.com',
-  displayName: 'Dev User',
+  displayName: 'Usuario de Desarrollo',
   photoURL: 'https://i.pravatar.cc/150?u=dev-user',
   providerId: 'google.com',
   emailVerified: true,
-};
+  // This is a dummy object; it doesn't need all properties
+} as User;
 // --- END DEV MODE ---
 
 const ALLOWED_DOMAIN = "universidad-une.com";
@@ -45,7 +46,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false); // --- DEV MODE: Set to false ---
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
-  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(true);
 
   const clearUserData = useCallback(() => {
     setUser(null);
