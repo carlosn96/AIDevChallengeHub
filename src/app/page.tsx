@@ -2,16 +2,12 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { LogIn } from 'lucide-react';
+import { Rocket } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 const Logo = () => (
-  <div className="inline-flex items-center justify-center w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-[#4facfe] to-[#00f2fe] p-1 logo-ring">
-    <div className="w-full h-full rounded-full bg-[#0f0f23] flex items-center justify-center">
-      <svg className="w-12 h-12 text-[#00f2fe]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    </div>
+  <div className="inline-block p-4 rounded-full card-glass mb-6">
+    <Rocket className="w-16 h-16 text-accent" />
   </div>
 );
 
