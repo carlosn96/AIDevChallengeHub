@@ -25,13 +25,13 @@ export default function TeamCard({ team, members }: TeamCardProps) {
                 <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-                <CardDescription>Your Team</CardDescription>
+                <CardDescription>Tu Equipo</CardDescription>
                 <CardTitle>{team.name}</CardTitle>
             </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">Team Members:</p>
+        <p className="text-sm text-muted-foreground">Miembros del equipo:</p>
         <ul className="space-y-3">
           {members.map((member) => {
             const avatar = PlaceHolderImages.find(
@@ -51,7 +51,7 @@ export default function TeamCard({ team, members }: TeamCardProps) {
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{member.name}</span>
-                {member.id === "user-1" && <Badge variant="outline">You</Badge>}
+                {member.id === "user-1" && <Badge variant="outline">Tú</Badge>}
               </li>
             );
           })}

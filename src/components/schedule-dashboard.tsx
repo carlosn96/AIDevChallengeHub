@@ -60,8 +60,8 @@ const EventCard = ({ event, isLive, isUpcoming }: { event: ScheduleEvent, isLive
                 </Badge>
                 <CardTitle>{event.title}</CardTitle>
             </div>
-            {isLive && <Badge className="bg-red-500 text-white animate-pulse">LIVE</Badge>}
-            {isUpcoming && !isLive && <Badge variant="outline">Upcoming</Badge>}
+            {isLive && <Badge className="bg-red-500 text-white animate-pulse">EN VIVO</Badge>}
+            {isUpcoming && !isLive && <Badge variant="outline">Próximo</Badge>}
         </div>
         
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground pt-2">
@@ -124,6 +124,20 @@ export default function ScheduleDashboard() {
 
   const days: ('Day 1' | 'Day 2' | 'Day 3')[] = ['Day 1', 'Day 2', 'Day 3'];
 
+  const dayTranslations = {
+    'Day 1': 'Día 1',
+    'Day 2': 'Día 2',
+    'Day 3': 'Día 3',
+  }
+
+  const typeTranslations : {[key: string]: string} = {
+    'all': 'Todos los tipos',
+    'conference': 'Conferencia',
+    'workshop': 'Taller',
+    'challenge': 'Reto',
+    'ceremony': 'Ceremonia',
+   }
+
   return (
     <Card>
       <CardHeader>
@@ -132,9 +146,9 @@ export default function ScheduleDashboard() {
                 <CalendarDays className="h-6 w-6 text-primary" />
             </div>
             <div>
-                <CardTitle>Event Schedule</CardTitle>
+                <CardTitle>Cronograma del Evento</CardTitle>
                 <CardDescription>
-                Filter events by day and activity type.
+                Filtra los eventos por día y tipo de actividad.
                 </CardDescription>
             </div>
         </div>
@@ -145,21 +159,21 @@ export default function ScheduleDashboard() {
             <TabsList>
               {days.map((day) => (
                 <TabsTrigger key={day} value={day}>
-                  {day}
+                  {dayTranslations[day]}
                 </TabsTrigger>
               ))}
             </TabsList>
             <div className="w-full sm:w-auto min-w-[180px]">
                 <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as any)}>
                 <SelectTrigger>
-                    <SelectValue placeholder="Filter by type" />
+                    <SelectValue placeholder="Filtrar por tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="conference">Conference</SelectItem>
-                    <SelectItem value="workshop">Workshop</SelectItem>
-                    <SelectItem value="challenge">Challenge</SelectItem>
-                    <SelectItem value="ceremony">Ceremony</SelectItem>
+                    <SelectItem value="all">{typeTranslations['all']}</SelectItem>
+                    <SelectItem value="conference">{typeTranslations['conference']}</SelectItem>
+                    <SelectItem value="workshop">{typeTranslations['workshop']}</SelectItem>
+                    <SelectItem value="challenge">{typeTranslations['challenge']}</SelectItem>
+                    <SelectItem value="ceremony">{typeTranslations['ceremony']}</SelectItem>
                 </SelectContent>
                 </Select>
             </div>
@@ -171,7 +185,7 @@ export default function ScheduleDashboard() {
                   {filteredSchedule.map((event) => (
                     <EventCard 
                         key={event.id} 
-                        event={event} 
+                        event={{...event, type: typeTranslations[event.type] as any}}
                         isLive={liveState.liveIds.has(event.id)}
                         isUpcoming={liveState.upcomingIds.has(event.id)}
                     />
@@ -179,7 +193,7 @@ export default function ScheduleDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                  <p>No events match your current filters for {day}.</p>
+                  <p>No hay eventos que coincidan con tus filtros para {dayTranslations[day]}.</p>
                 </div>
               )}
             </TabsContent>

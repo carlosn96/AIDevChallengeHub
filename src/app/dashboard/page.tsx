@@ -18,7 +18,7 @@ export default function DashboardPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold">Error</h1>
-        <p>Could not find your team. Please contact an administrator.</p>
+        <p>No se pudo encontrar tu equipo. Por favor, contacta a un administrador.</p>
       </div>
     );
   }

@@ -89,10 +89,10 @@ export default function LoginPage() {
             
             <div className="relative z-10">
               <h2 className="orbitron text-2xl font-bold text-white text-center mb-2">
-                Welcome
+                Bienvenido
               </h2>
               <p className="inter text-gray-400 text-center mb-8">
-                Access the future of AI development
+                Accede al futuro del desarrollo con IA
               </p>
 
               {displayError && (
@@ -119,7 +119,7 @@ export default function LoginPage() {
                       <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                       <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
-                    Continue with Google
+                    Continuar con Google
                   </>
                 )}
               </Button>
@@ -129,15 +129,15 @@ export default function LoginPage() {
           <div className="grid grid-cols-3 gap-3">
             <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
               <Sparkles className="text-2xl mb-1 text-gray-300" />
-              <p className="inter text-xs text-gray-300 font-medium">Innovation</p>
+              <p className="inter text-xs text-gray-300 font-medium">Innovación</p>
             </div>
             <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
               <Bot className="text-2xl mb-1 text-gray-300" />
-              <p className="inter text-xs text-gray-300 font-medium">Advanced AI</p>
+              <p className="inter text-xs text-gray-300 font-medium">IA Avanzada</p>
             </div>
             <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
               <Trophy className="text-2xl mb-1 text-gray-300" />
-              <p className="inter text-xs text-gray-300 font-medium">Prizes</p>
+              <p className="inter text-xs text-gray-300 font-medium">Premios</p>
             </div>
           </div>
 
@@ -146,7 +146,7 @@ export default function LoginPage() {
               © 2025 AIDevChallenge
             </p>
             <p className="inter text-xs text-gray-700">
-              Powered by <span className="text-[#00f2fe] font-semibold">carlosn96</span>
+              Desarrollado por <span className="text-[#00f2fe] font-semibold">carlosn96</span>
             </p>
           </div>
         </div>

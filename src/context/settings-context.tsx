@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { type User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, db, provider } from '@/lib/firebase';
+import { type User, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 
 const ALLOWED_DOMAIN = "universidad-une.com";
@@ -62,10 +62,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
-    if (!auth || !provider) {
-        setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently not available. Please try again later.' });
+    if (!auth) {
+        setAuthError({ title: 'Servicio no disponible', message: 'El servicio de autenticación no está disponible en este momento. Por favor, inténtalo de nuevo más tarde.' });
         return;
     }
+
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account',
+    });
 
     setIsSigningIn(true);
     setAuthError(null);
@@ -84,7 +89,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setIsSigningIn(false);
             return;
         }
-        // Role will be set by onAuthStateChanged
     } catch (error: any) {
         if (error.code === 'auth/unauthorized-domain') {
              setAuthError({
@@ -128,7 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 export function useSettings() {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    throw new Error('useSettings must be used within a SettingsProvider');
+    throw new Error('useSettings debe ser usado dentro de un SettingsProvider');
   }
   return context;
 }

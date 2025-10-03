@@ -44,25 +44,25 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="rounded-full">
                   <Avatar>
-                    {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+                    {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'Usuario'} />}
                     <AvatarFallback>
                       {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : <UserIcon />}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="sr-only">Toggle user menu</span>
+                  <span className="sr-only">Alternar menú de usuario</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
                   <UserIcon className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>Perfil</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

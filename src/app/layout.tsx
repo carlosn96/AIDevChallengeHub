@@ -5,7 +5,7 @@ import { SettingsProvider } from '@/context/settings-context';
 
 export const metadata: Metadata = {
   title: 'AIDev Challenge Hub',
-  description: 'Welcome to the AIDev Challenge Hub',
+  description: 'Bienvenido a AIDev Challenge Hub',
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="es" className="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
