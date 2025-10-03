@@ -1,5 +1,18 @@
 'use client';
+import {
+  useFirebaseApp,
+  useAuth,
+  useFirestore,
+  useUser,
+  useFirebase,
+} from './provider';
 
-// This file now only exports the necessary hooks from the client provider.
-// All initialization logic has been moved to FirebaseClientProvider.
-export { useUser, useFirebase } from './client-provider';
+// This file serves as a barrel file for all public Firebase hooks and utilities.
+
+export {
+  useFirebase,
+  useFirebaseApp,
+  useAuth,
+  useFirestore,
+  useUser,
+};

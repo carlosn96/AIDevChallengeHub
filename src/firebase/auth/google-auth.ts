@@ -1,11 +1,9 @@
 'use client';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, signOut, type Auth } from "firebase/auth";
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
-export const handleGoogleSignIn = async () => {
-    // getAuth() will now correctly use the initialized app from the provider context.
-    const auth = getAuth(); 
+export const handleGoogleSignIn = async (auth: Auth) => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
@@ -31,8 +29,7 @@ export const handleGoogleSignIn = async () => {
     }
 };
 
-export const handleSignOut = async () => {
-    const auth = getAuth();
+export const handleSignOut = async (auth: Auth) => {
     try {
         await signOut(auth);
     } catch (error) {

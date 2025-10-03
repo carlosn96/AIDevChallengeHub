@@ -3,14 +3,7 @@
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-
-const LoadingScreen = () => (
-    <div className="flex items-center justify-center h-screen w-screen bg-background">
-        <div className="text-center">
-            <p className="text-xl font-semibold text-primary">Loading...</p>
-        </div>
-    </div>
-)
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {

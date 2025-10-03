@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { handleGoogleSignIn } from '@/firebase/auth/google-auth';
-import { useUser, useFirebase } from '@/firebase';
+import { useUser, useAuth, useFirebase } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Logo = () => (
@@ -16,6 +16,7 @@ const Logo = () => (
 
 export default function LoginPage() {
   const { user, loading } = useUser();
+  const auth = useAuth();
   const { error: firebaseError } = useFirebase();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -43,10 +44,11 @@ export default function LoginPage() {
   }, [user, router]);
 
   const onSignIn = async () => {
+    if (!auth) return;
     setIsSigningIn(true);
     setSignInError(null);
     try {
-      await handleGoogleSignIn();
+      await handleGoogleSignIn(auth);
       // The onAuthStateChanged listener in useUser will handle navigation
     } catch (e: any) {
       setSignInError(e.message);
@@ -111,7 +113,7 @@ export default function LoginPage() {
 
               <Button
                 onClick={onSignIn}
-                disabled={isSigningIn || loading}
+                disabled={isSigningIn || loading || !auth}
                 size="lg"
                 className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
               >
