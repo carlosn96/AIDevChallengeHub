@@ -4,18 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
-
-// --- DEV MODE: Dummy User ---
-const DUMMY_USER: User = {
-  uid: 'dev-user-id',
-  email: 'dev.user@universidad-une.com',
-  displayName: 'Development User',
-  photoURL: 'https://i.pravatar.cc/150?u=dev-user',
-  providerId: 'google.com',
-  emailVerified: true,
-  // This is a dummy object; it doesn't need all properties
-} as User;
-// --- END DEV MODE ---
+import { findOrCreateUser } from '@/lib/user-actions';
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
@@ -33,9 +22,6 @@ type SettingsContextType = {
   authError: AuthError | null;
   handleGoogleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
-  // --- DEV MODE ---
-  handleDevLogin: (role: UserRole) => void;
-  // --- END DEV MODE ---
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -43,7 +29,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // --- DEV MODE: Set to false ---
+  const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(true);
@@ -53,21 +39,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setRole(null);
   }, []);
 
-  // --- DEV MODE: Auth listener commented out ---
-  /*
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !db) {
         setIsFirebaseConfigured(false);
         setIsLoading(false);
         return;
     }
     setIsFirebaseConfigured(true);
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
             setUser(firebaseUser);
-            if (firebaseUser.email) {
-              setRole(getUserRole(firebaseUser.email));
+            const userRole = firebaseUser.email ? getUserRole(firebaseUser.email) : null;
+            setRole(userRole);
+
+            if (userRole === 'Student') {
+              // This is where we hook in the new logic
+              await findOrCreateUser(firebaseUser);
             }
         } else {
             clearUserData();
@@ -77,21 +65,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, [clearUserData]);
-  */
-  // --- END DEV MODE ---
-
-  // --- DEV MODE: handleDevLogin function ---
-  const handleDevLogin = (devRole: UserRole) => {
-    let email = 'dev.user@universidad-une.com';
-    if (devRole === 'Student') email = 'a1234567@universidad-une.com';
-    if (devRole === 'Teacher') email = 'name.lastname@universidad-une.com';
-    if (devRole === 'Admin') email = 'jdoe@universidad-une.com';
-
-    setUser({ ...DUMMY_USER, email });
-    setRole(devRole);
-    setIsLoading(false);
-  };
-  // --- END DEV MODE ---
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
@@ -102,6 +75,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account',
+      hd: ALLOWED_DOMAIN, // Directly enforce domain
     });
 
     setIsSigningIn(true);
@@ -112,6 +86,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const user = result.user;
         const email = user.email;
 
+        // This check is slightly redundant due to `hd` param, but good for safety
         if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
             await signOut(auth);
             setAuthError({
@@ -122,26 +97,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             return;
         }
     } catch (error: any) {
-        if (error.code === 'auth/unauthorized-domain') {
+        if (error.code === 'auth/popup-closed-by-user') {
+            // This is a common case, don't show a scary error
+            console.log("Sign-in popup closed by user.");
+        } else if (error.code === 'auth/unauthorized-domain') {
              setAuthError({
                 title: "Unauthorized Domain",
-                message: "This application is not authorized to run on this domain. Contact the administrator."
+                message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
             });
-        } else if (error.code !== 'auth/popup-closed-by-user') {
+        } else {
             setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
+            console.error("Google Sign-In Error:", error);
         }
-        console.error("Google Sign-In Error:", error);
     } finally {
         setIsSigningIn(false);
     }
   };
 
   const handleSignOut = async () => {
-    // --- DEV MODE: Sign out logic ---
-    clearUserData();
-    return;
-    // --- END DEV MODE ---
-    /*
     if (!auth) return;
     try {
       await signOut(auth);
@@ -150,7 +123,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       console.error("Sign Out Error:", error);
       setAuthError({ title: 'Sign Out Error', message: "There was a problem signing you out. Please try again." });
     }
-    */
   };
 
   const value = {
@@ -162,9 +134,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     handleGoogleSignIn,
     handleSignOut,
-    // --- DEV MODE ---
-    handleDevLogin,
-    // --- END DEV MODE ---
   };
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

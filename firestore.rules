@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // USERS
+    match /users/{userId} {
+      // Anyone can create their own user profile upon signing up.
+      allow create: if isSignedIn() && isOwner(userId);
+      // Users can only read their own profile.
+      allow get: if isSignedIn() && isOwner(userId);
+      // Users can only update their own profile.
+      // We restrict this so they can't change their role or team.
+      allow update: if isSignedIn() && isOwner(userId) 
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.teamId == resource.data.teamId;
+      // Users cannot delete their profiles.
+      allow delete: if false;
+    }
+
+    // TEAMS
+    match /teams/{teamId} {
+      // Any signed-in user can read team data.
+      allow get: if isSignedIn();
+      // Only authenticated users can create a new team (handled by backend logic).
+      allow create: if isSignedIn();
+      // Team updates (like adding a member) are handled by backend logic (transactions).
+      // A simple rule is to allow updates for any signed-in user,
+      // as the transaction will validate the logic (e.g., max members).
+      allow update: if isSignedIn();
+       // Teams cannot be deleted.
+      allow delete: if false;
+    }
+  }
+}
