@@ -1,10 +1,16 @@
-import { Team, User, users, teams } from '@/lib/data';
+'use client';
+
+import { teams, users as staticUsers, type Team } from '@/lib/data';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
+import { useUser } from '@/firebase';
 
 export default function DashboardPage() {
-  // Simulate fetching the logged-in user and their team
-  const currentUser: User = users[0];
+  const { user } = useUser();
+
+  // This is a simulation. In a real app, you'd fetch this from your backend based on the logged-in user.
+  // For now, we'll just use the first static user and find their team.
+  const currentUser = staticUsers[0];
   const myTeam: Team | undefined = teams.find(team => team.memberIds.includes(currentUser.id));
 
   if (!myTeam) {
@@ -17,7 +23,11 @@ export default function DashboardPage() {
     );
   }
 
-  const teamMembers = users.filter(user => myTeam.memberIds.includes(user.id));
+  const teamMembers = staticUsers.filter(user => myTeam.memberIds.includes(user.id));
+
+  if (!user) {
+    return null; // or a loading indicator
+  }
 
   return (
     <div className="grid gap-4 md:gap-8 lg:grid-cols-3 xl:grid-cols-4">
