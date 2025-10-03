@@ -1,6 +1,6 @@
 'use client';
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -18,6 +18,7 @@ export const isFirebaseConfigured = configValues.every(Boolean);
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
+let provider: GoogleAuthProvider | undefined;
 
 // Initialize Firebase only on the client side to avoid SSR issues.
 if (isFirebaseConfigured && typeof window !== 'undefined') {
@@ -25,6 +26,10 @@ if (isFirebaseConfigured && typeof window !== 'undefined') {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
+    provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account',
+    });
     
     enableIndexedDbPersistence(db).catch((err) => {
       if (err.code === 'failed-precondition') {
@@ -39,7 +44,8 @@ if (isFirebaseConfigured && typeof window !== 'undefined') {
     app = undefined;
     auth = undefined;
     db = undefined;
+    provider = undefined;
   }
 }
 
-export { app, auth, db };
+export { app, auth, db, provider };
