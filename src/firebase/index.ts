@@ -1,8 +1,8 @@
 'use client';
 
-import { initializeApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, type FirebaseOptions, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { useFirebase, useUser } from './client-provider';
 
 function getFirebaseConfig(): FirebaseOptions {
@@ -15,26 +15,33 @@ function getFirebaseConfig(): FirebaseOptions {
       appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     };
 
-    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-        throw new Error('Firebase configuration is missing. Make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.');
+    if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+        throw new Error('Firebase configuration is missing or incomplete. Make sure NEXT_PUBLIC_FIREBASE_* environment variables are set in your .env file.');
     }
 
     return firebaseConfig;
 }
 
 
+let app: FirebaseApp;
+let auth: Auth;
+let firestore: Firestore;
+
 export function initializeFirebase() {
-  const apps = getApps();
-  const firebaseConfig = getFirebaseConfig();
-  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
-
-  if (!app) {
-    throw new Error("Firebase has not been initialized. Please ensure your environment variables are set up correctly.");
+  if (typeof window !== 'undefined') {
+    const apps = getApps();
+    if (!apps.length) {
+      const firebaseConfig = getFirebaseConfig();
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      firestore = getFirestore(app);
+    } else {
+      app = apps[0];
+      auth = getAuth(app);
+      firestore = getFirestore(app);
+    }
   }
-
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
-
+  
   return { app, auth, firestore };
 }
 
