@@ -47,7 +47,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setIsFirebaseConfigured(true);
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        setIsLoading(true);
         if (firebaseUser) {
             setUser(firebaseUser);
             if (firebaseUser.email) {
