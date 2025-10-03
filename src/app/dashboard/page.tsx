@@ -13,11 +13,11 @@ export default function DashboardPage() {
   }
 
   // Render the appropriate dashboard based on the user's role
-  if (role === 'Alumno') {
+  if (role === 'Student') {
     return <StudentDashboard />;
   }
   
-  if (role === 'Docente' || role === 'Administrativo') {
+  if (role === 'Teacher' || role === 'Admin') {
     return (
       <div className="w-full">
         <ScheduleDashboard />
@@ -28,8 +28,8 @@ export default function DashboardPage() {
   // Fallback for any other case or if role is null
   return (
     <div>
-      <h1 className="text-2xl font-bold">Acceso no configurado</h1>
-      <p>Tu rol no tiene una vista de dashboard configurada. Por favor, contacta a un administrador.</p>
+      <h1 className="text-2xl font-bold">Access Not Configured</h1>
+      <p>Your role does not have a configured dashboard view. Please contact an administrator.</p>
     </div>
   );
 }

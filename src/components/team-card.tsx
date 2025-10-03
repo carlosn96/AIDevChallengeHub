@@ -25,13 +25,13 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
                 <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
-                <CardDescription>Tu Equipo</CardDescription>
+                <CardDescription>Your Team</CardDescription>
                 <CardTitle>{team.name}</CardTitle>
             </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">Miembros del equipo:</p>
+        <p className="text-sm text-muted-foreground">Team members:</p>
         <ul className="space-y-3">
           {members.map((member) => (
               <li key={member.id} className="flex items-center gap-3">
@@ -42,7 +42,7 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
                     </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{member.name}</span>
-                {member.id === currentUserId && <Badge variant="outline">Tú</Badge>}
+                {member.id === currentUserId && <Badge variant="outline">You</Badge>}
               </li>
           ))}
         </ul>

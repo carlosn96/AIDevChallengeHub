@@ -9,7 +9,7 @@ import { getUserRole, type UserRole } from '@/lib/roles';
 const DUMMY_USER: User = {
   uid: 'dev-user-id',
   email: 'dev.user@universidad-une.com',
-  displayName: 'Usuario de Desarrollo',
+  displayName: 'Development User',
   photoURL: 'https://i.pravatar.cc/150?u=dev-user',
   providerId: 'google.com',
   emailVerified: true,
@@ -83,9 +83,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // --- DEV MODE: handleDevLogin function ---
   const handleDevLogin = (devRole: UserRole) => {
     let email = 'dev.user@universidad-une.com';
-    if (devRole === 'Alumno') email = 'a1234567@universidad-une.com';
-    if (devRole === 'Docente') email = 'nombre.apellido@universidad-une.com';
-    if (devRole === 'Administrativo') email = 'jdoe@universidad-une.com';
+    if (devRole === 'Student') email = 'a1234567@universidad-une.com';
+    if (devRole === 'Teacher') email = 'name.lastname@universidad-une.com';
+    if (devRole === 'Admin') email = 'jdoe@universidad-une.com';
 
     setUser({ ...DUMMY_USER, email });
     setRole(devRole);
@@ -95,7 +95,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
-        setAuthError({ title: 'Servicio no disponible', message: 'El servicio de autenticación no está disponible en este momento. Por favor, inténtalo de nuevo más tarde.' });
+        setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
         return;
     }
 
@@ -115,8 +115,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
             await signOut(auth);
             setAuthError({
-                title: "Dominio no Autorizado",
-                message: `El acceso está restringido a cuentas del dominio @${ALLOWED_DOMAIN}. Por favor, utiliza tu cuenta institucional.`
+                title: "Unauthorized Domain",
+                message: `Access is restricted to accounts from the @${ALLOWED_DOMAIN} domain. Please use your institutional account.`
             });
             setIsSigningIn(false);
             return;
@@ -124,11 +124,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
         if (error.code === 'auth/unauthorized-domain') {
              setAuthError({
-                title: "Dominio no autorizado",
-                message: "Esta aplicación no está autorizada para ejecutarse en este dominio. Contacta al administrador."
+                title: "Unauthorized Domain",
+                message: "This application is not authorized to run on this domain. Contact the administrator."
             });
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            setAuthError({ title: "Error de Autenticación", message: "No se pudo completar el inicio de sesión. Por favor, inténtalo de nuevo." });
+            setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
         }
         console.error("Google Sign-In Error:", error);
     } finally {
@@ -148,7 +148,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       clearUserData();
     } catch (error: any) {
       console.error("Sign Out Error:", error);
-      setAuthError({ title: 'Error al cerrar sesión', message: "Ocurrió un problema al cerrar tu sesión. Por favor, intenta de nuevo." });
+      setAuthError({ title: 'Sign Out Error', message: "There was a problem signing you out. Please try again." });
     }
     */
   };
@@ -173,7 +173,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 export function useSettings() {
   const context = useContext(SettingsContext);
   if (context === undefined) {
-    throw new Error('useSettings debe ser usado dentro de un SettingsProvider');
+    throw new Error('useSettings must be used within a SettingsProvider');
   }
   return context;
 }

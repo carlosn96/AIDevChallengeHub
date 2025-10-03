@@ -18,7 +18,7 @@ export default function StudentDashboard() {
     return (
       <div className="p-4 md:p-8">
         <h1 className="text-2xl font-bold">Error</h1>
-        <p>No se pudo encontrar tu equipo. Por favor, contacta a un administrador.</p>
+        <p>Could not find your team. Please contact an administrator.</p>
       </div>
     );
   }
