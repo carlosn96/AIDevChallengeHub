@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Rocket } from 'lucide-react';
+import { Rocket, Sparkles, Bot, Trophy } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 const Logo = () => (
@@ -100,16 +100,16 @@ export default function LoginPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer">
-              <div className="text-2xl mb-1">🚀</div>
+            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
+              <Sparkles className="text-2xl mb-1 text-gray-300" />
               <p className="inter text-xs text-gray-300 font-medium">Innovation</p>
             </div>
-            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer">
-              <div className="text-2xl mb-1">🤖</div>
+            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
+              <Bot className="text-2xl mb-1 text-gray-300" />
               <p className="inter text-xs text-gray-300 font-medium">Advanced AI</p>
             </div>
-            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer">
-              <div className="text-2xl mb-1">🏆</div>
+            <div className="feature-badge rounded-xl p-3 text-center cursor-pointer flex flex-col items-center justify-center">
+              <Trophy className="text-2xl mb-1 text-gray-300" />
               <p className="inter text-xs text-gray-300 font-medium">Prizes</p>
             </div>
           </div>
