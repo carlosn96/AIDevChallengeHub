@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, db, firebaseConfig } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser } from '@/lib/user-actions';
 
@@ -32,6 +32,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
 
   const clearUserData = useCallback(() => {
     setUser(null);
@@ -39,28 +40,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured || !auth) {
+    const checkFirebaseConfig = () => {
+      const configValues = Object.values(firebaseConfig);
+      const allConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
+      setIsFirebaseConfigured(allConfigured);
+
+      if (allConfigured) {
+        if (auth) {
+          const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+              setUser(firebaseUser);
+              const userRole = firebaseUser.email ? getUserRole(firebaseUser.email) : null;
+              setRole(userRole);
+              if (userRole === 'Student' && db) {
+                await findOrCreateUser(firebaseUser);
+              }
+            } else {
+              clearUserData();
+            }
+            setIsLoading(false);
+          });
+          return () => unsubscribe();
+        }
+      } else {
         setAuthError({ title: 'Configuration Error', message: 'Authentication is currently unavailable.' });
         setIsLoading(false);
-        return;
-    }
+      }
+    };
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-            setUser(firebaseUser);
-            const userRole = firebaseUser.email ? getUserRole(firebaseUser.email) : null;
-            setRole(userRole);
-
-            if (userRole === 'Student' && db) {
-              await findOrCreateUser(firebaseUser);
-            }
-        } else {
-            clearUserData();
-        }
-        setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    checkFirebaseConfig();
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
@@ -79,19 +87,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAuthError(null);
 
     try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        const email = user.email;
-
-        if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-            await signOut(auth);
-            setAuthError({
-                title: "Unauthorized Domain",
-                message: `Access is restricted to accounts from the @${ALLOWED_DOMAIN} domain. Please use your institutional account.`
-            });
-            setIsSigningIn(false);
-            return;
-        }
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged will handle the user state update
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user') {
             console.log("Sign-in popup closed by user.");
@@ -100,6 +97,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                 title: "Unauthorized Domain",
                 message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
             });
+        } else if (error.code === 'auth/cancelled-popup-request') {
+             console.log("Sign-in popup request cancelled.");
         } else {
             setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
             console.error("Google Sign-In Error:", error);
