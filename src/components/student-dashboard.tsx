@@ -7,7 +7,7 @@ import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
 import { type UserProfile, type Team as DbTeam } from '@/lib/db-types';
-import { type User as StaticUser, teams as staticTeams, users as staticUsers } from '@/lib/data'; 
+import { type User as StaticUser, users as staticUsers } from '@/lib/data'; 
 
 export default function StudentDashboard() {
   const { user } = useSettings();

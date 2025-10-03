@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth, db, allConfigured as isFirebaseConfigured } from '@/lib/firebase';
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser } from '@/lib/user-actions';
 
@@ -42,11 +42,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (isFirebaseConfigured && auth) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
-          setUser(firebaseUser);
-          const userRole = firebaseUser.email ? getUserRole(firebaseUser.email) : null;
-          setRole(userRole);
-          if (userRole === 'Student' && db) {
-            await findOrCreateUser(firebaseUser);
+          const userEmail = firebaseUser.email;
+          if (userEmail && userEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
+            setUser(firebaseUser);
+            const userRole = getUserRole(userEmail);
+            setRole(userRole);
+            if (userRole === 'Student' && db) {
+              await findOrCreateUser(firebaseUser);
+            }
+          } else {
+            // User signed in with a non-allowed domain, sign them out.
+            await signOut(auth);
+            setAuthError({
+                title: "Unauthorized Domain",
+                message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
+            });
+            clearUserData();
           }
         } else {
           clearUserData();
@@ -55,7 +66,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       });
       return () => unsubscribe();
     } else {
-      setAuthError({ title: 'Configuration Error', message: 'Authentication is currently unavailable.' });
+      // Firebase is not configured.
       setIsLoading(false);
     }
   }, [clearUserData]);
@@ -81,7 +92,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user') {
             console.log("Sign-in popup closed by user.");
-        } else if (error.code === 'auth/unauthorized-domain') {
+        } else if (error.code === 'auth/unauthorized-domain' || error.customData?._tokenResponse?.oauthIdToken.split('.').length > 1 && !JSON.parse(atob(error.customData._tokenResponse.oauthIdToken.split('.')[1])).hd === ALLOWED_DOMAIN) {
              setAuthError({
                 title: "Unauthorized Domain",
                 message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
