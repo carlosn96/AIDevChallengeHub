@@ -38,8 +38,9 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
         appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
       };
 
+      // Check if all required config values are present
       if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-        throw new Error('Firebase configuration is missing. Make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.');
+        throw new Error('Firebase configuration is missing or incomplete in .env file.');
       }
 
       const apps = getApps();
@@ -53,12 +54,14 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
         setUser(user);
         setLoading(false);
       }, (error) => {
+        console.error("Auth State Change Error:", error);
         setError(error.message);
         setLoading(false);
       });
 
       return () => unsubscribe();
     } catch (e: any) {
+      console.error("Firebase Initialization Error:", e.message);
       setError(e.message);
       setLoading(false);
     }

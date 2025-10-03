@@ -1,5 +1,4 @@
 'use client';
-import { initializeFirebase } from '@/firebase';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 
 const provider = new GoogleAuthProvider();
@@ -8,7 +7,7 @@ provider.setCustomParameters({ prompt: 'select_account' });
 const ALLOWED_DOMAIN = "universidad-une.com";
 
 export const handleGoogleSignIn = async () => {
-    const { auth } = initializeFirebase();
+    const auth = getAuth(); // Get auth instance on demand
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
@@ -20,18 +19,17 @@ export const handleGoogleSignIn = async () => {
         
         return user;
     } catch (error: any) {
-        // Handle specific error codes if needed
         if (error.code === 'auth/popup-closed-by-user') {
-            // Don't throw an error if the user closes the popup
+            console.log("Sign-in popup closed by user.");
             return null;
         }
         console.error("Google Sign-In Error:", error);
-        throw error; // Re-throw the error to be caught by the UI
+        throw new Error(error.message || "An unknown error occurred during sign-in.");
     }
 };
 
 export const handleSignOut = async () => {
-    const { auth } = initializeFirebase();
+    const auth = getAuth(); // Get auth instance on demand
     try {
         await signOut(auth);
     } catch (error) {
