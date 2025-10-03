@@ -13,37 +13,38 @@ const firebaseConfig = {
 };
 
 const configValues = Object.values(firebaseConfig);
-export const isFirebaseConfigured = configValues.every(Boolean);
+export const isFirebaseConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
-let provider: GoogleAuthProvider | undefined;
 
-if (isFirebaseConfigured && typeof window !== 'undefined') {
-  try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let provider: GoogleAuthProvider;
+
+if (isFirebaseConfigured) {
+    if (getApps().length === 0) {
+        app = initializeApp(firebaseConfig);
+    } else {
+        app = getApp();
+    }
+    
     auth = getAuth(app);
     db = getFirestore(app);
     provider = new GoogleAuthProvider();
     provider.setCustomParameters({
-      prompt: 'select_account',
+        prompt: 'select_account',
     });
-    
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn("Firestore persistence failed to enable due to multiple tabs.");
-      } else if (err.code === 'unimplemented') {
-        console.warn("Firestore persistence is not supported in this browser.");
-      }
-    });
-  } catch (error) {
-    console.error("Error initializing Firebase:", error);
-    app = undefined;
-    auth = undefined;
-    db = undefined;
-    provider = undefined;
-  }
+
+    if (typeof window !== 'undefined') {
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn("Firestore persistence failed to enable due to multiple tabs.");
+            } else if (err.code === 'unimplemented') {
+                console.warn("Firestore persistence is not supported in this browser.");
+            }
+        });
+    }
 }
+
 
 export { app, auth, db, provider };

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser } from '@/lib/user-actions';
 
@@ -32,7 +32,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
-  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(true);
 
   const clearUserData = useCallback(() => {
     setUser(null);
@@ -40,12 +39,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!auth || !db) {
-        setIsFirebaseConfigured(false);
+    if (!isFirebaseConfigured) {
         setIsLoading(false);
         return;
     }
-    setIsFirebaseConfigured(true);
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
@@ -54,7 +51,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setRole(userRole);
 
             if (userRole === 'Student') {
-              // This is where we hook in the new logic
               await findOrCreateUser(firebaseUser);
             }
         } else {
@@ -67,7 +63,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
-    if (!auth) {
+    if (!isFirebaseConfigured) {
         setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
         return;
     }
@@ -75,7 +71,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account',
-      hd: ALLOWED_DOMAIN, // Directly enforce domain
+      hd: ALLOWED_DOMAIN,
     });
 
     setIsSigningIn(true);
@@ -86,7 +82,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const user = result.user;
         const email = user.email;
 
-        // This check is slightly redundant due to `hd` param, but good for safety
         if (!email || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
             await signOut(auth);
             setAuthError({
@@ -98,7 +93,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user') {
-            // This is a common case, don't show a scary error
             console.log("Sign-in popup closed by user.");
         } else if (error.code === 'auth/unauthorized-domain') {
              setAuthError({
@@ -115,7 +109,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
-    if (!auth) return;
+    if (!isFirebaseConfigured) return;
     try {
       await signOut(auth);
       clearUserData();
