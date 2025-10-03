@@ -47,8 +47,8 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
-  const displayError = authError?.message || (!isFirebaseConfigured ? "Authentication is currently unavailable." : null);
-  const errorTitle = authError?.title || "Configuration Error";
+  const displayError = authError?.message;
+  const errorTitle = authError?.title;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 size="lg"
                 className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
               >
-                {isSigningIn || isLoading ? (
+                {isSigningIn || (isLoading && isFirebaseConfigured) ? (
                   'Signing In...'
                 ) : (
                   <>

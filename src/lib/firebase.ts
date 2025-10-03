@@ -3,7 +3,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from "firebase/firestore";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -12,12 +12,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+const configValues = Object.values(firebaseConfig);
+export const allConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
+
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
-
-const configValues = Object.values(firebaseConfig);
-const allConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
 
 if (allConfigured) {
   if (getApps().length === 0) {
@@ -44,4 +44,4 @@ if (allConfigured) {
   }
 }
 
-export { app, auth, db, firebaseConfig };
+export { app, auth, db };
