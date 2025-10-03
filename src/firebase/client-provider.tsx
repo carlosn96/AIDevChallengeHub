@@ -14,6 +14,14 @@ interface FirebaseContextType {
   error: string | null;
 }
 
+const LoadingScreen = () => (
+    <div className="flex items-center justify-center h-screen w-screen bg-background">
+        <div className="text-center">
+            <p className="text-xl font-semibold text-primary">Loading...</p>
+        </div>
+    </div>
+)
+
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
 // This component now handles the entire Firebase initialization lifecycle.
@@ -81,11 +89,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const contextValue = useMemo(() => firebaseState, [firebaseState]);
 
   if (contextValue.loading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-screen bg-background">
-        <p className="text-xl font-semibold text-primary">Loading Firebase...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (contextValue.error && !contextValue.app) {
@@ -100,11 +104,7 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   }
   
   if (!contextValue.app) {
-     return (
-        <div className="flex items-center justify-center h-screen w-screen bg-background">
-            <p className="text-xl font-semibold text-primary">Initializing Firebase...</p>
-        </div>
-    )
+     return <LoadingScreen />;
   }
 
   return (
