@@ -7,7 +7,8 @@ import { useFirebase, useUser } from './client-provider';
 
 export function initializeFirebase(firebaseConfig?: FirebaseOptions) {
   const apps = getApps();
-  const app = apps.length > 0 ? apps[0] : (firebaseConfig ? initializeApp(getFirebaseConfig()) : undefined);
+  const firebaseEnvConfig = getFirebaseConfig();
+  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseEnvConfig);
 
   if (!app) {
     throw new Error("Firebase has not been initialized. Please ensure your environment variables are set up correctly.");
