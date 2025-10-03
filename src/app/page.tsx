@@ -119,7 +119,7 @@ export default function LoginPage() {
               © 2025 AIDevChallenge
             </p>
             <p className="inter text-xs text-gray-700">
-              Powered by <span className="text-[#00f2fe] font-semibold">Neural Networks</span>
+              Powered by <span className="text-[#00f2fe] font-semibold">carlosn96</span>
             </p>
           </div>
         </div>
