@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
 
   useEffect(() => {
+    // Generate particles only on the client-side to prevent hydration mismatch
     const newParticles = Array.from({ length: 50 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -99,7 +100,7 @@ export default function LoginPage() {
                  <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Configuration Error</AlertTitle>
-                  <AlertDescription>Authentication is currently unavailable.</AlertDescription>
+                  <AlertDescription>{ authError?.message || 'Authentication is currently unavailable.'}</AlertDescription>
                 </Alert>
               ) : displayError ? (
                 <Alert variant="destructive" className="mb-4">
