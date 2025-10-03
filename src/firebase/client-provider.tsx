@@ -1,11 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeFirebase } from '.';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { FirebaseApp } from 'firebase/app';
-import { Auth } from 'firebase/auth';
-import { Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, type FirebaseOptions, type FirebaseApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 interface FirebaseContextType {
   app: FirebaseApp | undefined;
@@ -17,6 +15,29 @@ interface FirebaseContextType {
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
+
+function initializeFirebase() {
+  const firebaseConfig: FirebaseOptions = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
+
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    throw new Error('Firebase configuration is missing. Make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.');
+  }
+
+  const apps = getApps();
+  const app = !apps.length ? initializeApp(firebaseConfig) : apps[0];
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+
+  return { app, auth, firestore };
+}
+
 
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
   const [firebaseInstances, setFirebaseInstances] = useState<{
@@ -30,18 +51,23 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const { app, auth, firestore } = initializeFirebase();
-    setFirebaseInstances({ app, auth, firestore });
+    try {
+      const { app, auth, firestore } = initializeFirebase();
+      setFirebaseInstances({ app, auth, firestore });
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    }, (error) => {
-      setError(error.message);
-      setLoading(false);
-    });
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setLoading(false);
+      }, (error) => {
+        setError(error.message);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (e: any) {
+      setError(e.message);
+      setLoading(false);
+    }
   }, []);
 
   return (
