@@ -4,10 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { handleGoogleSignIn } from '@/firebase/auth/google-auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { useSettings } from '@/context/settings-context';
 
 
 const Logo = () => (
@@ -17,10 +15,15 @@ const Logo = () => (
 );
 
 export default function LoginPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [signInError, setSignInError] = useState<string | null>(null);
+  const {
+    user,
+    isLoading,
+    isFirebaseConfigured,
+    authError,
+    handleGoogleSignIn,
+    isSigningIn,
+  } = useSettings();
+  
   const router = useRouter();
 
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
@@ -39,35 +42,13 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (!auth) {
-      setLoading(false);
-      return;
+    if (!isLoading && user) {
+      router.push('/dashboard');
     }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-      if (user) {
-        router.push('/dashboard');
-      }
-    });
+  }, [user, isLoading, router]);
 
-    return () => unsubscribe();
-  }, [router]);
-
-  const onSignIn = async () => {
-    if (!auth) return;
-    setIsSigningIn(true);
-    setSignInError(null);
-    try {
-      await handleGoogleSignIn();
-      // The onAuthStateChanged listener will handle navigation
-    } catch (e: any) {
-      setSignInError(e.message);
-      setIsSigningIn(false);
-    }
-  };
-  
-  const displayError = signInError || (!isFirebaseConfigured ? "Firebase configuration is missing." : null);
+  const displayError = authError?.message || (!isFirebaseConfigured ? "Firebase configuration is missing." : null);
+  const errorTitle = authError?.title || "Authentication Error";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -117,18 +98,18 @@ export default function LoginPage() {
               {displayError && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Authentication Error</AlertTitle>
+                  <AlertTitle>{errorTitle}</AlertTitle>
                   <AlertDescription>{displayError}</AlertDescription>
                 </Alert>
               )}
 
               <Button
-                onClick={onSignIn}
-                disabled={isSigningIn || loading || !auth}
+                onClick={handleGoogleSignIn}
+                disabled={isSigningIn || isLoading || !isFirebaseConfigured}
                 size="lg"
                 className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
               >
-                {isSigningIn || loading ? (
+                {isSigningIn || isLoading ? (
                   'Signing In...'
                 ) : (
                   <>

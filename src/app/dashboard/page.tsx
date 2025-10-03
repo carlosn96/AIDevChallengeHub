@@ -3,10 +3,10 @@
 import { teams, users as staticUsers, type Team } from '@/lib/data';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useSettings } from '@/context/settings-context';
 
 export default function DashboardPage() {
-  const { user } = useCurrentUser();
+  const { user } = useSettings();
 
   // This is a simulation. In a real app, you'd fetch this from your backend based on the logged-in user.
   // For now, we'll just use the first static user and find their team.

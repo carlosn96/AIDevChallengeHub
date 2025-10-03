@@ -12,8 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User as UserIcon } from "lucide-react";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { handleSignOut } from "@/firebase/auth/google-auth";
+import { useSettings } from "@/context/settings-context";
 
 const Logo = () => (
     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -23,7 +22,7 @@ const Logo = () => (
   );
   
 export default function Header() {
-  const { user } = useCurrentUser();
+  const { user, handleSignOut } = useSettings();
   
   const onLogout = async () => {
     await handleSignOut();

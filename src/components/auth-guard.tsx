@@ -3,20 +3,20 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LoadingScreen } from '@/components/loading-screen';
-import { useCurrentUser } from '@/hooks/use-current-user';
+import { useSettings } from '@/context/settings-context';
 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useCurrentUser();
+  const { user, isLoading } = useSettings();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
+    if (!isLoading && !user) {
+      router.replace('/');
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading || !user) {
+  if (isLoading || !user) {
     return <LoadingScreen />;
   }
 
