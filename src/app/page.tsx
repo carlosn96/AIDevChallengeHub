@@ -87,15 +87,6 @@ export default function LoginPage() {
                   Continue with Google
                 </Button>
               </Link>
-
-              <div className="mt-6 text-center">
-                <p className="inter text-sm text-gray-500">
-                  By continuing, you agree to our{' '}
-                  <a href="#" className="text-[#00f2fe] hover:text-[#4facfe] link-neon">terms</a>
-                  {' '}and{' '}
-                  <a href="#" className="text-[#00f2fe] hover:text-[#4facfe] link-neon">privacy</a>
-                </p>
-              </div>
             </div>
           </div>
 
