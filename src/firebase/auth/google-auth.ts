@@ -12,10 +12,10 @@ export const handleGoogleSignIn = async (auth: Auth) => {
         const user = result.user;
 
         // Domain validation
-        if (user.email && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-            await signOut(auth); // Sign out the user immediately if domain is not allowed
-            throw new Error(`Access denied. Only emails from @${ALLOWED_DOMAIN} are allowed.`);
-        }
+        // if (user.email && !user.email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+        //     await signOut(auth); // Sign out the user immediately if domain is not allowed
+        //     throw new Error(`Access denied. Only emails from @${ALLOWED_DOMAIN} are allowed.`);
+        // }
         
         return user;
     } catch (error: any) {
