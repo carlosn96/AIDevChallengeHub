@@ -1,10 +1,28 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
-import { getFirebaseConfig } from './config';
+
+// Define the configuration directly in the provider.
+const getFirebaseConfig = (): FirebaseOptions => {
+    const firebaseConfig: FirebaseOptions = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+        throw new Error('Firebase configuration is missing or incomplete in .env file. Please add your Firebase project credentials to the .env file in the root of your project.');
+    }
+
+    return firebaseConfig;
+}
+
 
 interface FirebaseContextType {
   app: FirebaseApp;
@@ -54,17 +72,26 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
     }
   }, []);
 
-  if (!firebaseInstances) {
-     if (error) {
-        return (
-            <div className="flex items-center justify-center h-screen w-screen bg-background text-red-500">
-                <div className="text-center p-4 rounded-md border border-red-500/50 bg-red-500/10">
-                    <h1 className="text-xl font-bold mb-2">Firebase Error</h1>
-                    <p>{error}</p>
-                </div>
+  if (loading) {
+     return (
+        <div className="flex items-center justify-center h-screen w-screen bg-background">
+            <p className="text-xl font-semibold text-primary">Loading Firebase...</p>
+        </div>
+    )
+  }
+
+  if (error && !firebaseInstances) {
+    return (
+        <div className="flex items-center justify-center h-screen w-screen bg-background text-red-500">
+            <div className="text-center p-4 rounded-md border border-red-500/50 bg-red-500/10">
+                <h1 className="text-xl font-bold mb-2">Firebase Error</h1>
+                <p>{error}</p>
             </div>
-        )
-     }
+        </div>
+    )
+ }
+ 
+  if (!firebaseInstances) {
     return (
         <div className="flex items-center justify-center h-screen w-screen bg-background">
             <p className="text-xl font-semibold text-primary">Initializing Firebase...</p>
@@ -88,6 +115,7 @@ export const useFirebase = () => {
 };
 
 export const useUser = () => {
-    const context = useFirebase();
+    const context = useContext(FirebaseContext);
+    // In this simplified setup, we can directly return what we need.
     return { user: context.user, loading: context.loading, error: context.error };
 };
