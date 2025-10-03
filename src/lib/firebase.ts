@@ -12,11 +12,13 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const areAllConfigValuesPresent = Object.values(firebaseConfig).every(val => typeof val === 'string' && val.length > 0);
-
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let isFirebaseConfigured = false;
+let firebaseInitializationError: string | null = null;
+
+const areAllConfigValuesPresent = Object.values(firebaseConfig).every(val => typeof val === 'string' && val.length > 0);
 
 if (areAllConfigValuesPresent) {
   try {
@@ -28,6 +30,7 @@ if (areAllConfigValuesPresent) {
     
     auth = getAuth(app);
     db = getFirestore(app);
+    isFirebaseConfigured = true;
 
     if (typeof window !== 'undefined') {
       enableIndexedDbPersistence(db).catch((err: any) => {
@@ -38,17 +41,22 @@ if (areAllConfigValuesPresent) {
         }
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Firebase initialization error:", error);
-    // If initialization fails, ensure services are null
+    firebaseInitializationError = error.message || "An unknown error occurred during Firebase initialization.";
     app = null;
     auth = null;
     db = null;
+    isFirebaseConfigured = false;
   }
 } else {
-    console.log("Firebase configuration is missing or incomplete.");
+    const missingKeys = Object.entries(firebaseConfig)
+      .filter(([, value]) => !value)
+      .map(([key]) => key);
+    firebaseInitializationError = `Firebase configuration is missing or incomplete. Missing keys: ${missingKeys.join(', ')}`;
+    console.log(firebaseInitializationError);
+    isFirebaseConfigured = false;
 }
 
-export const isFirebaseConfigured = !!app;
 
-export { app, auth, db };
+export { app, auth, db, isFirebaseConfigured, firebaseInitializationError };

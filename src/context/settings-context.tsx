@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser } from '@/lib/user-actions';
 
@@ -39,7 +39,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isFirebaseConfigured && auth) {
+    if (!isFirebaseConfigured) {
+      setAuthError({ 
+        title: 'Configuration Error', 
+        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (auth) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const userEmail = firebaseUser.email;
@@ -51,7 +60,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               await findOrCreateUser(firebaseUser);
             }
           } else {
-            // User signed in with a non-allowed domain, sign them out.
             await signOut(auth);
             setAuthError({
                 title: "Unauthorized Domain",
@@ -66,7 +74,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       });
       return () => unsubscribe();
     } else {
-      // Firebase is not configured.
       setIsLoading(false);
     }
   }, [clearUserData]);
@@ -88,11 +95,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle the user state update
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user') {
             console.log("Sign-in popup closed by user.");
-        } else if (error.code === 'auth/unauthorized-domain' || error.customData?._tokenResponse?.oauthIdToken.split('.').length > 1 && !JSON.parse(atob(error.customData._tokenResponse.oauthIdToken.split('.')[1])).hd === ALLOWED_DOMAIN) {
+        } else if (error.code === 'auth/unauthorized-domain' || (error.customData?._tokenResponse?.oauthIdToken && !JSON.parse(atob(error.customData._tokenResponse.oauthIdToken.split('.')[1])).hd === ALLOWED_DOMAIN)) {
              setAuthError({
                 title: "Unauthorized Domain",
                 message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
