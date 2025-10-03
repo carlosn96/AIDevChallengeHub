@@ -7,6 +7,11 @@ import { useSettings } from '@/context/settings-context';
 
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  // --- DEV MODE: AuthGuard is bypassed ---
+  return <>{children}</>;
+  // --- END DEV MODE ---
+
+  /*
   const { user, isLoading } = useSettings();
   const router = useRouter();
 
@@ -21,4 +26,5 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+  */
 }

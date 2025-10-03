@@ -2,10 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
+import { Rocket, Sparkles, Bot, Trophy, AlertCircle, User, Shield, Briefcase } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSettings } from '@/context/settings-context';
+import type { UserRole } from '@/lib/roles';
 
 
 const Logo = () => (
@@ -22,6 +23,9 @@ export default function LoginPage() {
     authError,
     handleGoogleSignIn,
     isSigningIn,
+    // --- DEV MODE ---
+    handleDevLogin,
+    // --- END DEV MODE ---
   } = useSettings();
   
   const router = useRouter();
@@ -41,14 +45,23 @@ export default function LoginPage() {
     setParticles(newParticles);
   }, []);
 
+  // --- DEV MODE: Redirection commented out ---
   useEffect(() => {
     if (!isLoading && user) {
       router.push('/dashboard');
     }
   }, [user, isLoading, router]);
+  // --- END DEV MODE ---
 
   const displayError = authError?.message || (!isFirebaseConfigured ? "La autenticación no está disponible en este momento." : null);
   const errorTitle = authError?.title || "Error de Configuración";
+  
+  // --- DEV MODE: Dev login handler ---
+  const onDevLogin = (role: UserRole) => {
+    handleDevLogin(role);
+    router.push('/dashboard');
+  }
+  // --- END DEV MODE ---
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -103,6 +116,38 @@ export default function LoginPage() {
                 </Alert>
               )}
 
+              {/* --- DEV MODE: Role selection buttons --- */}
+              <div className='space-y-4'>
+                <p className="text-center text-sm text-amber-400 font-semibold">[MODO DESARROLLO]</p>
+                <Button
+                  onClick={() => onDevLogin('Alumno')}
+                  size="lg"
+                  className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
+                >
+                  <User />
+                  Entrar como Alumno
+                </Button>
+                <Button
+                  onClick={() => onDevLogin('Docente')}
+                  size="lg"
+                  className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
+                >
+                  <Briefcase />
+                  Entrar como Docente
+                </Button>
+                <Button
+                  onClick={() => onDevLogin('Administrativo')}
+                  size="lg"
+                  className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
+                >
+                  <Shield />
+                  Entrar como Admin
+                </Button>
+              </div>
+              {/* --- END DEV MODE --- */}
+
+
+              {/* --- DEV MODE: Original button commented out ---
               <Button
                 onClick={handleGoogleSignIn}
                 disabled={isSigningIn || isLoading || !isFirebaseConfigured}
@@ -123,6 +168,7 @@ export default function LoginPage() {
                   </>
                 )}
               </Button>
+              --- END DEV MODE --- */}
             </div>
           </div>
 

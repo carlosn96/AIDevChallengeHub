@@ -1,9 +1,20 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { type User, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
+
+// --- DEV MODE: Dummy User ---
+const DUMMY_USER: User = {
+  uid: 'dev-user-id',
+  email: 'dev.user@universidad-une.com',
+  displayName: 'Dev User',
+  photoURL: 'https://i.pravatar.cc/150?u=dev-user',
+  providerId: 'google.com',
+  emailVerified: true,
+};
+// --- END DEV MODE ---
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
@@ -21,6 +32,9 @@ type SettingsContextType = {
   authError: AuthError | null;
   handleGoogleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
+  // --- DEV MODE ---
+  handleDevLogin: (role: UserRole) => void;
+  // --- END DEV MODE ---
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -28,7 +42,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // --- DEV MODE: Set to false ---
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
@@ -38,10 +52,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setRole(null);
   }, []);
 
+  // --- DEV MODE: Auth listener commented out ---
+  /*
   useEffect(() => {
     if (!auth) {
-        setIsLoading(false);
         setIsFirebaseConfigured(false);
+        setIsLoading(false);
         return;
     }
     setIsFirebaseConfigured(true);
@@ -60,6 +76,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, [clearUserData]);
+  */
+  // --- END DEV MODE ---
+
+  // --- DEV MODE: handleDevLogin function ---
+  const handleDevLogin = (devRole: UserRole) => {
+    let email = 'dev.user@universidad-une.com';
+    if (devRole === 'Alumno') email = 'a1234567@universidad-une.com';
+    if (devRole === 'Docente') email = 'nombre.apellido@universidad-une.com';
+    if (devRole === 'Administrativo') email = 'jdoe@universidad-une.com';
+
+    setUser({ ...DUMMY_USER, email });
+    setRole(devRole);
+    setIsLoading(false);
+  };
+  // --- END DEV MODE ---
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
@@ -105,6 +136,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
+    // --- DEV MODE: Sign out logic ---
+    clearUserData();
+    return;
+    // --- END DEV MODE ---
+    /*
     if (!auth) return;
     try {
       await signOut(auth);
@@ -113,6 +149,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       console.error("Sign Out Error:", error);
       setAuthError({ title: 'Error al cerrar sesión', message: "Ocurrió un problema al cerrar tu sesión. Por favor, intenta de nuevo." });
     }
+    */
   };
 
   const value = {
@@ -124,6 +161,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     authError,
     handleGoogleSignIn,
     handleSignOut,
+    // --- DEV MODE ---
+    handleDevLogin,
+    // --- END DEV MODE ---
   };
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
