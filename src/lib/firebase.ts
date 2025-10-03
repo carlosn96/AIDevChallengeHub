@@ -20,7 +20,6 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let provider: GoogleAuthProvider | undefined;
 
-// Initialize Firebase only on the client side to avoid SSR issues.
 if (isFirebaseConfigured && typeof window !== 'undefined') {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -40,7 +39,6 @@ if (isFirebaseConfigured && typeof window !== 'undefined') {
     });
   } catch (error) {
     console.error("Error initializing Firebase:", error);
-    // If initialization fails, ensure all exports are undefined.
     app = undefined;
     auth = undefined;
     db = undefined;
