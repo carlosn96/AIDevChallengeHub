@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { type User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, provider, isFirebaseConfigured } from '@/lib/firebase';
+import { type User, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
@@ -28,6 +28,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
+  const [isFirebaseConfigured, setIsFirebaseConfigured] = useState(false);
 
   const clearUserData = useCallback(() => {
     setUser(null);
@@ -36,8 +37,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth) {
         setIsLoading(false);
+        setIsFirebaseConfigured(false);
         return;
     }
+    setIsFirebaseConfigured(true);
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
         setIsLoading(true);
         if (firebaseUser) {
@@ -52,10 +56,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
-    if (!auth || !provider) {
+    if (!auth) {
         setAuthError({ title: 'Configuration Error', message: 'Firebase is not configured correctly.' });
         return;
     }
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account',
+    });
+
     setIsSigningIn(true);
     setAuthError(null);
 
@@ -73,10 +82,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setIsSigningIn(false);
             return;
         }
-        // onAuthStateChanged will handle setting the user
     } catch (error: any) {
-        if (error.code !== 'auth/popup-closed-by-user') {
-            setAuthError({ title: "Authentication Error", message: error.message });
+        if (error.code === 'auth/unauthorized-domain') {
+             setAuthError({
+                title: "Dominio no autorizado por Firebase",
+                message: "El dominio de esta aplicación no está autorizado para usar la autenticación de Firebase. Por favor, añada el dominio de esta página a la lista de 'Dominios autorizados' en la configuración de Authentication en la Consola de Firebase."
+            });
+        } else if (error.code !== 'auth/popup-closed-by-user') {
+            setAuthError({ title: "Error de Autenticación", message: error.message });
         }
         console.error("Google Sign-In Error:", error);
     } finally {
@@ -91,7 +104,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       clearUserData();
     } catch (error: any) {
       console.error("Sign Out Error:", error);
-      setAuthError({ title: 'Sign-Out Error', message: error.message });
+      setAuthError({ title: 'Error al cerrar sesión', message: error.message });
     }
   };
 
