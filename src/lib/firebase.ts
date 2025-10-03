@@ -15,7 +15,6 @@ const firebaseConfig = {
 const configValues = Object.values(firebaseConfig);
 export const isFirebaseConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
 
-
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
