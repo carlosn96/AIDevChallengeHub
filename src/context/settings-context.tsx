@@ -40,6 +40,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
+        setAuthError({ title: 'Configuration Error', message: 'Authentication is currently unavailable.' });
         setIsLoading(false);
         return;
     }

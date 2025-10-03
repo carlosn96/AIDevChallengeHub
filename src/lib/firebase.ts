@@ -15,33 +15,40 @@ const firebaseConfig = {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let isFirebaseConfigured = false;
 
-const configValues = Object.values(firebaseConfig);
-const isFirebaseConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
+if (typeof window !== 'undefined') {
+  const configValues = Object.values(firebaseConfig);
+  const allConfigured = configValues.every(val => typeof val === 'string' && val.length > 0);
 
-if (isFirebaseConfigured) {
+  if (allConfigured) {
     if (getApps().length === 0) {
+      try {
         app = initializeApp(firebaseConfig);
-    } else {
-        app = getApp();
-    }
-    
-    if (app) {
         auth = getAuth(app);
         db = getFirestore(app);
+        
+        enableIndexedDbPersistence(db).catch((err: any) => {
+          if (err.code === 'failed-precondition') {
+            console.warn("Firestore persistence failed to enable due to multiple tabs.");
+          } else if (err.code === 'unimplemented') {
+            console.warn("Firestore persistence is not supported in this browser.");
+          }
+        });
 
-        if (typeof window !== 'undefined') {
-            try {
-                enableIndexedDbPersistence(db);
-            } catch (err: any) {
-                 if (err.code === 'failed-precondition') {
-                    console.warn("Firestore persistence failed to enable due to multiple tabs.");
-                } else if (err.code === 'unimplemented') {
-                    console.warn("Firestore persistence is not supported in this browser.");
-                }
-            }
-        }
+        isFirebaseConfigured = true;
+
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+        isFirebaseConfigured = false;
+      }
+    } else {
+      app = getApp();
+      auth = getAuth(app);
+      db = getFirestore(app);
+      isFirebaseConfigured = true;
     }
+  }
 }
 
 export { app, auth, db, isFirebaseConfigured };
