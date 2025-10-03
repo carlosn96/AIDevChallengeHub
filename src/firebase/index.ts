@@ -5,21 +5,6 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { useFirebase, useUser } from './client-provider';
 
-export function initializeFirebase(firebaseConfig?: FirebaseOptions) {
-  const apps = getApps();
-  const firebaseEnvConfig = getFirebaseConfig();
-  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseEnvConfig);
-
-  if (!app) {
-    throw new Error("Firebase has not been initialized. Please ensure your environment variables are set up correctly.");
-  }
-
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
-
-  return { app, auth, firestore };
-}
-
 function getFirebaseConfig(): FirebaseOptions {
     const firebaseConfig = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -37,5 +22,20 @@ function getFirebaseConfig(): FirebaseOptions {
     return firebaseConfig;
 }
 
+
+export function initializeFirebase() {
+  const apps = getApps();
+  const firebaseConfig = getFirebaseConfig();
+  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+
+  if (!app) {
+    throw new Error("Firebase has not been initialized. Please ensure your environment variables are set up correctly.");
+  }
+
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+
+  return { app, auth, firestore };
+}
 
 export { useUser, useFirebase };
