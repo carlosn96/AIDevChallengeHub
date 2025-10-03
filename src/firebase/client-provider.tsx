@@ -1,14 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeApp, getApps, type FirebaseOptions, type FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, type Auth, type User } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirebaseConfig } from './config';
 
 interface FirebaseContextType {
-  app: FirebaseApp | undefined;
-  auth: Auth | undefined;
-  firestore: Firestore | undefined;
+  app: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore;
   user: User | null;
   loading: boolean;
   error: string | null;
@@ -18,10 +19,10 @@ const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined
 
 export function FirebaseClientProvider({ children }: { children: React.ReactNode }) {
   const [firebaseInstances, setFirebaseInstances] = useState<{
-    app: FirebaseApp | undefined;
-    auth: Auth | undefined;
-    firestore: Firestore | undefined;
-  }>({ app: undefined, auth: undefined, firestore: undefined });
+    app: FirebaseApp;
+    auth: Auth;
+    firestore: Firestore;
+  } | null>(null);
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,22 +30,9 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     try {
-      const firebaseConfig: FirebaseOptions = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      };
-
-      // Check if all required config values are present
-      if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-        throw new Error('Firebase configuration is missing or incomplete in .env file.');
-      }
-
+      const config = getFirebaseConfig();
       const apps = getApps();
-      const app = !apps.length ? initializeApp(firebaseConfig) : apps[0];
+      const app = !apps.length ? initializeApp(config) : apps[0];
       const auth = getAuth(app);
       const firestore = getFirestore(app);
       
@@ -66,6 +54,24 @@ export function FirebaseClientProvider({ children }: { children: React.ReactNode
       setLoading(false);
     }
   }, []);
+
+  if (!firebaseInstances) {
+     if (error) {
+        return (
+            <div className="flex items-center justify-center h-screen w-screen bg-background text-red-500">
+                <div className="text-center p-4 rounded-md border border-red-500/50 bg-red-500/10">
+                    <h1 className="text-xl font-bold mb-2">Firebase Error</h1>
+                    <p>{error}</p>
+                </div>
+            </div>
+        )
+     }
+    return (
+        <div className="flex items-center justify-center h-screen w-screen bg-background">
+            <p className="text-xl font-semibold text-primary">Initializing Firebase...</p>
+        </div>
+    )
+  }
 
   return (
     <FirebaseContext.Provider value={{ ...firebaseInstances, user, loading, error }}>

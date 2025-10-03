@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { handleGoogleSignIn } from '@/firebase/auth/google-auth';
-import { useUser } from '@/firebase';
+import { useUser, useFirebase } from '@/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Logo = () => (
@@ -15,9 +15,10 @@ const Logo = () => (
 );
 
 export default function LoginPage() {
-  const { user, loading, error: authError } = useUser();
+  const { user, loading } = useUser();
+  const { error: firebaseError } = useFirebase();
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [signInError, setSignInError] = useState<string | null>(null);
   const router = useRouter();
 
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
@@ -40,25 +41,20 @@ export default function LoginPage() {
       router.push('/dashboard');
     }
   }, [user, router]);
-  
-  useEffect(() => {
-    if (authError) {
-      setError(authError);
-      setIsSigningIn(false);
-    }
-  }, [authError]);
 
   const onSignIn = async () => {
     setIsSigningIn(true);
-    setError(null);
+    setSignInError(null);
     try {
       await handleGoogleSignIn();
       // The onAuthStateChanged listener in useUser will handle navigation
     } catch (e: any) {
-      setError(e.message);
+      setSignInError(e.message);
       setIsSigningIn(false);
     }
   };
+
+  const displayError = signInError || firebaseError;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -105,11 +101,11 @@ export default function LoginPage() {
                 Access the future of AI development
               </p>
 
-              {error && (
+              {displayError && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Authentication Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{displayError}</AlertDescription>
                 </Alert>
               )}
 
