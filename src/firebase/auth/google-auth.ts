@@ -2,13 +2,13 @@
 import { initializeFirebase } from '@/firebase';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
 
-const { auth } = initializeFirebase();
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
 export const handleGoogleSignIn = async () => {
+    const { auth } = initializeFirebase();
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
@@ -31,6 +31,7 @@ export const handleGoogleSignIn = async () => {
 };
 
 export const handleSignOut = async () => {
+    const { auth } = initializeFirebase();
     try {
         await signOut(auth);
     } catch (error) {
