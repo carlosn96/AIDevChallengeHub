@@ -63,7 +63,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const handleGoogleSignIn = async () => {
     if (!auth || !provider) {
-        setAuthError({ title: 'Configuration Error', message: 'Firebase is not configured correctly.' });
+        setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently not available. Please try again later.' });
         return;
     }
 
@@ -88,11 +88,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
         if (error.code === 'auth/unauthorized-domain') {
              setAuthError({
-                title: "Dominio no autorizado por Firebase",
-                message: "Este dominio no está autorizado para la autenticación de Firebase. Añade el dominio a la lista de 'Dominios autorizados' en la configuración de Autenticación de la Consola de Firebase."
+                title: "Dominio no autorizado",
+                message: "Esta aplicación no está autorizada para ejecutarse en este dominio. Contacta al administrador."
             });
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            setAuthError({ title: "Error de Autenticación", message: error.message });
+            setAuthError({ title: "Error de Autenticación", message: "No se pudo completar el inicio de sesión. Por favor, inténtalo de nuevo." });
         }
         console.error("Google Sign-In Error:", error);
     } finally {
@@ -107,7 +107,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       clearUserData();
     } catch (error: any) {
       console.error("Sign Out Error:", error);
-      setAuthError({ title: 'Error al cerrar sesión', message: error.message });
+      setAuthError({ title: 'Error al cerrar sesión', message: "Ocurrió un problema al cerrar tu sesión. Por favor, intenta de nuevo." });
     }
   };
 

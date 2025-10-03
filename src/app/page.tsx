@@ -47,8 +47,8 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router]);
 
-  const displayError = authError?.message || (!isFirebaseConfigured ? "Firebase configuration is missing." : null);
-  const errorTitle = authError?.title || "Authentication Error";
+  const displayError = authError?.message || (!isFirebaseConfigured ? "La autenticación no está disponible en este momento." : null);
+  const errorTitle = authError?.title || "Error de Configuración";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -110,7 +110,7 @@ export default function LoginPage() {
                 className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
               >
                 {isSigningIn || isLoading ? (
-                  'Signing In...'
+                  'Iniciando Sesión...'
                 ) : (
                   <>
                     <svg className="w-6 h-6" viewBox="0 0 24 24">
