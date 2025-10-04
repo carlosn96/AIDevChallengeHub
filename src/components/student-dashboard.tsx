@@ -20,75 +20,76 @@ export default function StudentDashboard() {
   const [assignedProject, setAssignedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // This effect now ONLY fetches and listens to data.
-  // It no longer tries to perform any write/assignment operations.
+  // Effect 1: Listen for the user's own profile document
   useEffect(() => {
-    if (!user || !db) {
+    if (!user?.uid || !db) {
       setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
-
-    const unsubUser = onSnapshot(doc(db, 'users', user.uid), (userDoc) => {
-      if (userDoc.exists()) {
-        const profile = userDoc.data() as UserProfile;
-        setUserProfile(profile);
-
-        if (profile.teamId) {
-          // If user has a team, set up a listener for that team
-          const unsubTeam = onSnapshot(doc(db, 'teams', profile.teamId), async (teamDoc) => {
-            if (teamDoc.exists()) {
-              const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
-              setMyTeam(teamData);
-
-              // Fetch assigned project if it exists
-              if (teamData.projectId) {
-                const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
-                setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
-              } else {
-                setAssignedProject(null);
-              }
-            } else {
-              setMyTeam(null);
-            }
-            setIsLoading(false);
-          });
-          return () => unsubTeam();
-        } else {
-          // User has no teamId, they are likely being assigned one.
-          // We just show a loading or pending state.
-          setMyTeam(null);
-          setIsLoading(false); // Stop loading to show "Team Pending" card
-        }
+    const unsubUser = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        setUserProfile(doc.data() as UserProfile);
       } else {
-        // User doc doesn't exist, which shouldn't happen if they are logged in
-        setIsLoading(false);
+        // This case should be handled by the context, but as a fallback:
         console.warn(`User document for ${user.uid} not found.`);
+        setUserProfile(null);
       }
+      // We set loading to false here, the next effect will handle team loading
+      setIsLoading(false);
     });
 
     return () => unsubUser();
-  }, [user]);
+  }, [user?.uid]);
 
-  // This effect fetches team members whenever the team changes.
+  // Effect 2: Listen for team, project, and member data, triggered by changes to teamId
   useEffect(() => {
-    const fetchTeamMembers = async () => {
-      if (myTeam && Array.isArray(myTeam.memberIds) && myTeam.memberIds.length > 0) {
-        try {
-          const members = await getTeamMembers(myTeam.memberIds);
-          setTeamMembers(members);
-        } catch (error) {
-          console.error("Failed to fetch team members:", error);
+    const teamId = userProfile?.teamId;
+
+    if (!teamId || !db) {
+      // If there's no teamId, clear old team data
+      setMyTeam(null);
+      setTeamMembers([]);
+      setAssignedProject(null);
+      return;
+    }
+
+    // --- Team Listener ---
+    const unsubTeam = onSnapshot(doc(db, 'teams', teamId), async (teamDoc) => {
+      if (teamDoc.exists()) {
+        const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
+        setMyTeam(teamData);
+
+        // --- Fetch Members (dependent on teamData) ---
+        if (teamData.memberIds && teamData.memberIds.length > 0) {
+          try {
+            const members = await getTeamMembers(teamData.memberIds);
+            setTeamMembers(members);
+          } catch (error) {
+            console.error("Failed to fetch team members:", error);
+            setTeamMembers([]);
+          }
+        } else {
           setTeamMembers([]);
         }
-      } else {
-        setTeamMembers([]);
-      }
-    };
 
-    fetchTeamMembers();
-  }, [myTeam]);
+        // --- Fetch Project (dependent on teamData) ---
+        if (teamData.projectId) {
+          const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
+          setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
+        } else {
+          setAssignedProject(null);
+        }
+      } else {
+        console.warn(`Team document for ID ${teamId} not found.`);
+        setMyTeam(null);
+      }
+    });
+
+    return () => unsubTeam();
+  }, [userProfile?.teamId]);
+
 
   // Initial loading state (while user profile is being fetched for the first time)
   if (isLoading) {
