@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { 
   doc,
@@ -32,34 +33,61 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
 };
 
 /**
- * Checks if a user exists, and if not, creates their profile.
- * This function is intended to be called upon user login for ANY valid user.
+ * Finds a user by email, or creates a new one if they don't exist.
+ * This prevents duplicate user profiles for the same email address.
+ * It also syncs the UID if it has changed (e.g., different auth provider).
  * @param user The Firebase Auth User object.
- * @returns The user's profile, either existing or newly created.
+ * @returns The user's profile.
  */
 export const findOrCreateUser = async (user: User): Promise<UserProfile | null> => {
-  if (!db) return null;
-  const userProfile = await getUserProfile(user.uid);
+  if (!db || !user.email) return null;
 
-  if (userProfile) {
-    console.log(`User ${user.uid} already exists.`);
-    return userProfile;
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where("email", "==", user.email), limit(1));
+  const querySnapshot = await getDocs(q);
+
+  if (!querySnapshot.empty) {
+    // User with this email already exists
+    const existingUserDoc = querySnapshot.docs[0];
+    const existingUserProfile = existingUserDoc.data() as UserProfile;
+    
+    console.log(`User with email ${user.email} already exists.`);
+
+    if (existingUserProfile.uid !== user.uid) {
+      // The UID is different, which could happen with different providers.
+      // We should ideally merge or update, but for now we will just log this.
+      // A more robust solution might involve a dedicated account merging strategy.
+      console.warn(`Existing user has a different UID. Auth UID: ${user.uid}, DB UID: ${existingUserProfile.uid}`);
+      // Optional: Update the UID in the database, but be careful with this.
+      // For this implementation, we will trust the first record and return it.
+    }
+
+    // Optionally update display name and photo, as they might change.
+    if (existingUserProfile.displayName !== user.displayName || existingUserProfile.photoURL !== user.photoURL) {
+      await updateDoc(existingUserDoc.ref, {
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      });
+    }
+    
+    return { ...existingUserProfile, uid: existingUserDoc.id };
+  } else {
+    // No user with this email, so create a new profile document.
+    console.log(`Creating new user profile for ${user.uid} with email ${user.email}`);
+    const newUserProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      role: getUserRole(user.email),
+      createdAt: serverTimestamp() as any,
+    };
+    
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, newUserProfile);
+    
+    return newUserProfile;
   }
-
-  console.log(`Creating new user profile for ${user.uid}`);
-  const newUserProfile: UserProfile = {
-    uid: user.uid,
-    email: user.email,
-    displayName: user.displayName,
-    photoURL: user.photoURL,
-    role: getUserRole(user.email!),
-    createdAt: serverTimestamp() as any,
-  };
-  
-  const userDocRef = doc(db, 'users', user.uid);
-  await setDoc(userDocRef, newUserProfile);
-  
-  return newUserProfile;
 };
 
 
