@@ -31,20 +31,18 @@ export default function LoginPage() {
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
 
   useEffect(() => {
-    if (!isLoading) {
-        // Generate particles only on the client-side to prevent hydration mismatch
-        const newParticles = Array.from({ length: 50 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 3 + 1,
-        speed: Math.random() * 15 + 10,
-        delay: Math.random() * 5,
-        xEnd: Math.random() * 20 - 10
-        }));
-        setParticles(newParticles);
-    }
-  }, [isLoading]);
+    // Generate particles only on the client-side to prevent hydration mismatch
+    const newParticles = Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 3 + 1,
+    speed: Math.random() * 15 + 10,
+    delay: Math.random() * 5,
+    xEnd: Math.random() * 20 - 10
+    }));
+    setParticles(newParticles);
+  }, []);
 
   useEffect(() => {
     if (!isLoading && user) {
