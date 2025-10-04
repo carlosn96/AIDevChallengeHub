@@ -8,7 +8,7 @@ import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 import { type LoginSettings } from '@/lib/db-types';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx"]; // dev and primary domains
+const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx"];
 
 type AuthError = {
   title: string;
@@ -38,7 +38,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isProcessingLogin, setIsProcessingLogin] = useState(false);
 
-
   const clearUserData = useCallback(() => {
     setUser(null);
     setRole(null);
@@ -52,11 +51,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAuthError(error);
   }, [clearUserData]);
 
-  // Effect for subscribing to login settings
+  // EFECTO 1: Escuchar cambios en loginSettings (separado)
   useEffect(() => {
     if (!isFirebaseConfigured || !db) {
+      setAuthError({ 
+        title: 'Configuration Error', 
+        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
+      });
+      setIsLoading(false);
       return;
     }
+
     const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
       const newLoginSettings = doc.exists() 
         ? (doc.data() as LoginSettings) 
@@ -65,89 +70,94 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
 
     return () => settingsUnsub();
-  }, []);
-  
-  // Effect for handling authentication state
+  }, []); // Sin dependencias - solo se ejecuta una vez
+
+  // EFECTO 2: Manejar autenticación (separado)
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setAuthError({ 
-        title: 'Configuration Error', 
-        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
-      });
-      setIsLoading(false);
-      return;
-    }
-    
-    if (!auth) {
+    if (!isFirebaseConfigured || !auth) {
       setIsLoading(false);
       return;
     }
 
     const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (isProcessingLogin) return;
+      if (isProcessingLogin) return;
 
-        if (!firebaseUser) {
-            clearUserData();
-            setIsLoading(false);
-            return;
-        }
-        
-        setIsLoading(true);
-        setIsProcessingLogin(true);
-        setAuthError(null);
+      if (!firebaseUser) {
+        clearUserData();
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      setIsProcessingLogin(true);
+      setAuthError(null);
 
-        const userRole = await getUserRole(firebaseUser.email || '');
-
-        // Scenario 1: Login is disabled for non-managers
-        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
-            await handleSignOutAndSetError({ title: "Login Disabled", message: loginSettings.disabledMessage });
-            setIsLoading(false);
-            setIsProcessingLogin(false);
-            return;
-        }
-        
+      try {
         const userEmail = firebaseUser.email;
+        const userRole = await getUserRole(userEmail || '');
         const userDomain = userEmail?.split('@')[1];
 
-        // Scenario 2: Unauthorized email domain
+        // Validación 1: Login deshabilitado
+        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
+          await handleSignOutAndSetError({ 
+            title: "Login Disabled", 
+            message: loginSettings.disabledMessage 
+          });
+          return;
+        }
+
+        // Validación 2: Dominio no autorizado
         if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
-            await handleSignOutAndSetError({ title: "Unauthorized Domain", message: "Please sign in with an authorized domain account." });
-            setIsLoading(false);
-            setIsProcessingLogin(false);
-            return;
+          await handleSignOutAndSetError({ 
+            title: "Unauthorized Domain", 
+            message: "Please sign in with an authorized domain account." 
+          });
+          return;
         }
 
-        // Scenario 3: User doesn't have an assigned role
+        // Validación 3: Sin rol asignado
         if (!userRole) {
-            await handleSignOutAndSetError({ title: "Access Denied", message: "Your account role is not authorized for this application." });
-            setIsLoading(false);
-            setIsProcessingLogin(false);
-            return;
+          await handleSignOutAndSetError({ 
+            title: "Access Denied", 
+            message: "Your account role is not authorized for this application." 
+          });
+          return;
         }
 
-        // If all checks pass, create/update user profile and set user state
+        // Usuario válido - crear/actualizar perfil
         const userProfile = await findOrCreateUser(firebaseUser);
         setUser(firebaseUser);
         setRole(userRole);
         
+        // Asignar equipo si es estudiante sin equipo
         if (userRole === 'Student' && userProfile && !userProfile.teamId) {
-          await assignStudentToTeam(userProfile);
+          // No esperamos - se hace en background
+          assignStudentToTeam(userProfile).catch(err => {
+            console.error('Error assigning student to team:', err);
+          });
         }
-        
+      } catch (error) {
+        console.error('Auth processing error:', error);
+        setAuthError({
+          title: 'Authentication Error',
+          message: 'An unexpected error occurred. Please try again.'
+        });
+      } finally {
         setIsLoading(false);
         setIsProcessingLogin(false);
+      }
     });
     
-    return () => {
-        authUnsub();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isProcessingLogin]);
+    return () => authUnsub();
+  }, [loginSettings, isProcessingLogin, clearUserData, handleSignOutAndSetError]); // Dependencias necesarias
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
-        setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
-        return;
+      setAuthError({ 
+        title: 'Service Unavailable', 
+        message: 'The authentication service is currently unavailable. Please try again later.' 
+      });
+      return;
     }
 
     const provider = new GoogleAuthProvider();
@@ -157,16 +167,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAuthError(null);
 
     try {
-        await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
-        if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-            console.log("Sign-in popup was not completed by the user.");
-        } else {
-            setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
-            console.error("Google Sign-In Error:", error);
-        }
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        console.log("Sign-in popup was not completed by the user.");
+      } else {
+        setAuthError({ 
+          title: "Authentication Error", 
+          message: "Could not complete the sign-in process. Please try again." 
+        });
+        console.error("Google Sign-In Error:", error);
+      }
     } finally {
-        setIsSigningIn(false);
+      setIsSigningIn(false);
     }
   };
 
@@ -177,7 +190,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAuthError(null);
     } catch (error: any) {
       console.error("Sign Out Error:", error);
-      setAuthError({ title: 'Sign Out Error', message: "There was a problem signing you out. Please try again." });
+      setAuthError({ 
+        title: 'Sign Out Error', 
+        message: "There was a problem signing you out. Please try again." 
+      });
     }
   };
 
