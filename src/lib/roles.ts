@@ -1,7 +1,8 @@
 export type UserRole = 'Student' | 'Teacher' | 'Admin' | null;
 
 // Regex patterns for email prefixes
-const studentPattern = /^(a\d{5,9}|\d{5,10})$/;
+//const studentPattern = /^(a\d{5,9}|\d{5,10})$/;
+const studentPattern = /^[a-zA-Z]+\.[a-zA-Z]+$/;
 const teacherPattern = /^[a-zA-Z]+\.[a-zA-Z]+$/;
 const adminPattern = /^[a-zA-Z][a-zA-Z]+$/;
 
