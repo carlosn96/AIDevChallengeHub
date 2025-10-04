@@ -27,13 +27,35 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { type Project } from '@/lib/db-types';
-import { createProject } from '@/lib/user-actions';
-import { FolderKanban, Loader2, PlusCircle } from 'lucide-react';
+import { createProject, updateProject, deleteProject } from '@/lib/user-actions';
+import { FolderKanban, Loader2, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 type ProjectManagementProps = {
@@ -48,8 +70,12 @@ const projectSchema = z.object({
 export default function ProjectManagement({ projects }: ProjectManagementProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const form = useForm<z.infer<typeof projectSchema>>({
+  const createForm = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: '',
@@ -57,7 +83,20 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof projectSchema>) => {
+  const editForm = useForm<z.infer<typeof projectSchema>>({
+    resolver: zodResolver(projectSchema),
+  });
+
+  const handleEditClick = (project: Project) => {
+    setEditingProject(project);
+    editForm.reset({
+      name: project.name,
+      description: project.description,
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleCreateSubmit = async (values: z.infer<typeof projectSchema>) => {
     setIsSubmitting(true);
     try {
       await createProject(values);
@@ -65,7 +104,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
         title: 'Project Created',
         description: `"${values.name}" has been successfully created.`,
       });
-      form.reset();
+      createForm.reset();
     } catch (error) {
       console.error('Failed to create project:', error);
       toast({
@@ -75,6 +114,50 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateSubmit = async (values: z.infer<typeof projectSchema>) => {
+    if (!editingProject) return;
+
+    setIsUpdating(true);
+    try {
+      await updateProject(editingProject.id, values);
+      toast({
+        title: 'Project Updated',
+        description: `"${values.name}" has been successfully updated.`,
+      });
+      setIsEditDialogOpen(false);
+      setEditingProject(null);
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'There was an error updating the project. Please try again.',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async (projectId: string) => {
+    setIsDeleting(true);
+    try {
+      await deleteProject(projectId);
+      toast({
+        title: 'Project Deleted',
+        description: 'The project has been successfully deleted.',
+      });
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: 'There was an error deleting the project. Please try again.',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -92,10 +175,10 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Form {...createForm}>
+              <form onSubmit={createForm.handleSubmit(handleCreateSubmit)} className="space-y-6">
                 <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -108,7 +191,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -154,17 +237,53 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {projects.map((project) => (
                   <TableRow key={project.id}>
                     <TableCell className="font-medium">{project.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs max-w-sm truncate">
+                    <TableCell className="text-muted-foreground text-xs max-w-xs truncate">
                         {project.description}
                     </TableCell>
                     <TableCell>
                       {project.createdAt?.toDate ? format(project.createdAt.toDate(), 'MMM d, yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(project)}>
+                              <Pencil className="h-4 w-4" />
+                              <span className="sr-only">Edit Project</span>
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete Project</span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the project "{project.name}" and un-assign it from any teams. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(project.id)}
+                                  disabled={isDeleting}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  {isDeleting ? 'Deleting...' : 'Delete'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -178,6 +297,57 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
           </CardContent>
         </Card>
       </div>
+
+       {/* Edit Project Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Project</DialogTitle>
+                <DialogDescription>
+                    Update the details for "{editingProject?.name}".
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...editForm}>
+                <form onSubmit={editForm.handleSubmit(handleUpdateSubmit)} className="space-y-6 py-4">
+                    <FormField
+                        control={editForm.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Project Name</FormLabel>
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={editForm.control}
+                        name="description"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                    <Textarea {...field} rows={4} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" disabled={isUpdating}>Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isUpdating}>
+                            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isUpdating ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

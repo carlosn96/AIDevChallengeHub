@@ -259,6 +259,33 @@ export const createProject = async (project: Omit<Project, 'id' | 'createdAt'>):
   return newDocRef.id;
 };
 
+export const updateProject = async (projectId: string, data: Partial<Omit<Project, 'id'>>) => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    const projectRef = doc(db, 'projects', projectId);
+    await updateDoc(projectRef, data);
+};
+
+export const deleteProject = async (projectId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const batch = writeBatch(db);
+
+  // 1. Delete the project document
+  const projectRef = doc(db, 'projects', projectId);
+  batch.delete(projectRef);
+
+  // 2. Find all teams assigned to this project and un-assign them
+  const teamsRef = collection(db, 'teams');
+  const q = query(teamsRef, where('projectId', '==', projectId));
+  const querySnapshot = await getDocs(q);
+  
+  querySnapshot.forEach((teamDoc) => {
+    batch.update(teamDoc.ref, { projectId: null });
+  });
+
+  // 3. Commit the batch
+  await batch.commit();
+};
+
 export const assignProjectToTeam = async (teamId: string, projectId: string | null) => {
   if (!db) throw new Error("Firestore is not initialized.");
   const teamRef = doc(db, 'teams', teamId);
