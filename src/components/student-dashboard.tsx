@@ -25,11 +25,15 @@ export default function StudentDashboard() {
       return;
     }
   
+    // Reset states on user change
     setIsLoading(true);
+    setUserProfile(null);
+    setMyTeam(null);
+    setTeamMembers([]);
   
     const unsubUser = onSnapshot(
       doc(db, 'users', user.uid),
-      async (userDoc) => {
+      (userDoc) => {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
@@ -55,15 +59,15 @@ export default function StudentDashboard() {
             return () => unsubTeam();
           } else {
             // User has a profile but no teamId, trigger assignment
-            setMyTeam(null);
             if (profile.role === 'Student') {
               console.log(`User ${profile.uid} has no team. Assigning...`);
-              await assignStudentToTeam(profile);
+              assignStudentToTeam(profile);
             }
-            setIsLoading(false);
+            setIsLoading(false); // Stop loading to show "Team Pending"
           }
         } else {
-          // User document doesn't exist.
+          // User document doesn't exist, which might be a transitional state
+          console.warn(`User document for ${user.uid} not found.`);
           setIsLoading(false);
         }
       },
@@ -79,8 +83,13 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchTeamMembers = async () => {
       if (myTeam && Array.isArray(myTeam.memberIds) && myTeam.memberIds.length > 0) {
-        const members = await getTeamMembers(myTeam.memberIds);
-        setTeamMembers(members);
+        try {
+          const members = await getTeamMembers(myTeam.memberIds);
+          setTeamMembers(members);
+        } catch (error) {
+          console.error("Failed to fetch team members:", error);
+          setTeamMembers([]);
+        }
       } else {
         setTeamMembers([]);
       }

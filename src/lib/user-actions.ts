@@ -54,12 +54,7 @@ export const findOrCreateUser = async (user: User): Promise<UserProfile | null> 
     console.log(`User with email ${user.email} already exists.`);
 
     if (existingUserProfile.uid !== user.uid) {
-      // The UID is different, which could happen with different providers.
-      // We should ideally merge or update, but for now we will just log this.
-      // A more robust solution might involve a dedicated account merging strategy.
       console.warn(`Existing user has a different UID. Auth UID: ${user.uid}, DB UID: ${existingUserProfile.uid}`);
-      // Optional: Update the UID in the database, but be careful with this.
-      // For this implementation, we will trust the first record and return it.
     }
 
     // Optionally update display name and photo, as they might change.
@@ -93,27 +88,42 @@ export const findOrCreateUser = async (user: User): Promise<UserProfile | null> 
 
 /**
  * Assigns a student user to a team with available spots, or creates a new team.
- * This operation is performed within a transaction to ensure atomicity.
+ * This operation is performed within a transaction to ensure atomicity and prevent race conditions.
  * @param userProfile The profile of the user to be assigned.
  */
 export const assignStudentToTeam = async (userProfile: UserProfile) => {
-  if (!db || userProfile.role !== 'Student' || userProfile.teamId) {
-    return; // Only assign students without a team
+  if (!db || userProfile.role !== 'Student') {
+    return; // Only assign students.
   }
 
-  console.log(`Assigning team for student ${userProfile.uid}`);
-  const teamsRef = collection(db, 'teams');
+  console.log(`Attempting to assign team for student ${userProfile.uid}`);
   const userRef = doc(db, 'users', userProfile.uid);
   
   try {
     await runTransaction(db, async (transaction) => {
-      // Find teams that are not full
+      // First, check if the user *already* has a valid team in a transaction-safe way.
+      const userDocInTransaction = await transaction.get(userRef);
+      const userProfileInTransaction = userDocInTransaction.data() as UserProfile;
+      
+      if (userProfileInTransaction.teamId) {
+        const currentTeamRef = doc(db, 'teams', userProfileInTransaction.teamId);
+        const teamDocInTransaction = await transaction.get(currentTeamRef);
+        if (teamDocInTransaction.exists()) {
+          console.log(`User ${userProfile.uid} is already in a valid team: ${userProfileInTransaction.teamId}. No action needed.`);
+          return; // Exit if user already has a valid team.
+        }
+      }
+
+      console.log(`User ${userProfile.uid} needs a team. Finding or creating one.`);
+      
+      const teamsRef = collection(db, 'teams');
       const q = query(
-        teamsRef, 
-        where('memberCount', '<', MAX_TEAM_MEMBERS), 
+        teamsRef,
+        where('memberCount', '<', MAX_TEAM_MEMBERS),
         limit(1)
       );
       
+      // Execute the query within the transaction context.
       const querySnapshot = await getDocs(q);
 
       let teamId: string;
@@ -127,7 +137,8 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         console.log(`Found open team: ${teamId}`);
 
         const currentMemberIds = teamDoc.data().memberIds || [];
-        const newMemberIds = [...currentMemberIds, userProfile.uid];
+        // Use a Set to prevent duplicates
+        const newMemberIds = Array.from(new Set([...currentMemberIds, userProfile.uid]));
         
         transaction.update(teamRef, {
           memberIds: newMemberIds,
@@ -141,21 +152,21 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         teamId = newTeamRef.id;
         teamRef = newTeamRef;
 
-        const newTeamData = {
-          name: `Team ${teamId.substring(0, 6)}`, // Simple name for now
+        const newTeamData: Omit<Team, 'id'> = {
+          name: `Team ${teamId.substring(0, 6)}`,
           memberIds: [userProfile.uid],
           memberCount: 1,
-          createdAt: serverTimestamp(),
+          createdAt: serverTimestamp() as any,
         };
         transaction.set(teamRef, newTeamData);
       }
       
       // Finally, update the user's profile with the new teamId
       transaction.update(userRef, { teamId });
+      console.log(`User ${userProfile.uid} successfully assigned to team ${teamId}.`);
     });
-    console.log(`Successfully assigned user ${userProfile.uid} to team.`);
   } catch (e) {
-    console.error("Transaction failed: ", e);
+    console.error("Team assignment transaction failed: ", e);
   }
 };
 
@@ -189,6 +200,11 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
   }
 
   const usersRef = collection(db, 'users');
+  // Firestore 'in' queries are limited to 30 items.
+  // If you expect more, you'll need to batch the requests.
+  if (memberIds.length > 30) {
+    console.warn("Fetching more than 30 team members, this may require batching.");
+  }
   const q = query(usersRef, where('uid', 'in', memberIds));
   
   try {
