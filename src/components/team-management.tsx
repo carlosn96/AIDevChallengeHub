@@ -17,19 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project } from '@/lib/db-types';
 import { assignProjectToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Combobox } from '@/components/ui/combobox';
 
 type TeamManagementProps = {
   teams: Team[];
@@ -41,6 +35,11 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const usersMap = useMemo(() => new Map(users.map(u => [u.uid, u])), [users]);
+
+  const projectOptions = useMemo(() => [
+    { value: 'none', label: 'No project assigned' },
+    ...projects.map(p => ({ value: p.id, label: p.name }))
+  ], [projects]);
 
   const handleProjectAssignment = async (teamId: string, projectId: string) => {
     try {
@@ -133,24 +132,14 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Select
-                    defaultValue={team.projectId || 'none'}
-                    onValueChange={(value) => handleProjectAssignment(team.id, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Assign a project..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-muted-foreground">No project assigned</span>
-                      </SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={projectOptions}
+                    value={team.projectId || 'none'}
+                    onChange={(value) => handleProjectAssignment(team.id, value)}
+                    placeholder='Assign a project...'
+                    searchPlaceholder='Search project...'
+                    notFoundMessage='No project found.'
+                  />
                 </TableCell>
               </TableRow>
             ))}
