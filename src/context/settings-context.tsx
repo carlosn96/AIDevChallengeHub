@@ -52,16 +52,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAuthError(error);
   }, [clearUserData]);
 
+  // Effect for subscribing to login settings
   useEffect(() => {
     if (!isFirebaseConfigured || !db) {
-      setAuthError({ 
-        title: 'Configuration Error', 
-        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
-      });
-      setIsLoading(false);
       return;
     }
-
     const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
       const newLoginSettings = doc.exists() 
         ? (doc.data() as LoginSettings) 
@@ -69,9 +64,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLoginSettings(newLoginSettings);
     });
 
+    return () => settingsUnsub();
+  }, []);
+  
+  // Effect for handling authentication state
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setAuthError({ 
+        title: 'Configuration Error', 
+        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
+      });
+      setIsLoading(false);
+      return;
+    }
+    
     if (!auth) {
       setIsLoading(false);
-      return () => settingsUnsub();
+      return;
     }
 
     const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -85,11 +94,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         
         setIsLoading(true);
         setIsProcessingLogin(true);
-        setAuthError(null); // Clear previous errors on a new auth attempt
+        setAuthError(null);
 
-        const userEmail = firebaseUser.email;
-        const userRole = await getUserRole(userEmail || '');
-        const userDomain = userEmail?.split('@')[1];
+        const userRole = await getUserRole(firebaseUser.email || '');
 
         // Scenario 1: Login is disabled for non-managers
         if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
@@ -98,6 +105,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setIsProcessingLogin(false);
             return;
         }
+        
+        const userEmail = firebaseUser.email;
+        const userDomain = userEmail?.split('@')[1];
 
         // Scenario 2: Unauthorized email domain
         if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
@@ -120,11 +130,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setUser(firebaseUser);
         setRole(userRole);
         
-        if (userRole === 'Student') {
-            // Safely check if the user profile exists and needs a team.
-            if (userProfile && !userProfile.teamId) {
-                await assignStudentToTeam(userProfile);
-            }
+        if (userRole === 'Student' && userProfile && !userProfile.teamId) {
+          await assignStudentToTeam(userProfile);
         }
         
         setIsLoading(false);
@@ -133,10 +140,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     
     return () => {
         authUnsub();
-        settingsUnsub();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loginSettings]);
+  }, [isProcessingLogin]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
@@ -152,14 +158,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle the rest of the logic.
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-            // User cancelled the login, so we don't show a big error.
-            // A subtle console log is enough for developers.
             console.log("Sign-in popup was not completed by the user.");
         } else {
-            // For other errors, we show a more prominent message.
             setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
             console.error("Google Sign-In Error:", error);
         }
@@ -172,8 +174,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!isFirebaseConfigured || !auth) return;
     try {
       await signOut(auth);
-      // The onAuthStateChanged listener will handle clearing user data
-      setAuthError(null); // Clear any errors on manual sign-out
+      setAuthError(null);
     } catch (error: any) {
       console.error("Sign Out Error:", error);
       setAuthError({ title: 'Sign Out Error', message: "There was a problem signing you out. Please try again." });
