@@ -36,6 +36,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
+  const [isProcessingLogin, setIsProcessingLogin] = useState(false);
+
 
   const clearUserData = useCallback(() => {
     setUser(null);
@@ -65,59 +67,64 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      setIsLoading(true);
-      setAuthError(null);
+        if (isProcessingLogin) return;
+        setIsLoading(true);
 
-      if (firebaseUser) {
-        const userEmail = firebaseUser.email;
-        const userRole = await getUserRole(userEmail || '');
-        
-        // Block access if login is disabled AND the user is NOT a manager.
-        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
-          await signOut(auth);
-          setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
-          clearUserData();
-          setIsLoading(false);
-          return;
+        if (firebaseUser) {
+            setIsProcessingLogin(true);
+            const userEmail = firebaseUser.email;
+            const userRole = await getUserRole(userEmail || '');
+
+            if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
+                setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
+                await signOut(auth);
+                clearUserData();
+                setIsLoading(false);
+                setIsProcessingLogin(false);
+                return;
+            }
+
+            const userDomain = userEmail?.split('@')[1];
+            if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
+                setAuthError({ title: "Unauthorized Domain", message: "Please sign in with an authorized domain account." });
+                await signOut(auth);
+                clearUserData();
+                setIsLoading(false);
+                setIsProcessingLogin(false);
+                return;
+            }
+
+            if (!userRole) {
+                setAuthError({ title: "Access Denied", message: "Your account role is not authorized for this application." });
+                await signOut(auth);
+                clearUserData();
+                setIsLoading(false);
+                setIsProcessingLogin(false);
+                return;
+            }
+            
+            // If all checks pass, set the user
+            setUser(firebaseUser);
+            setRole(userRole);
+
+            if (userRole === 'Student') {
+                const userProfile = await findOrCreateUser(firebaseUser);
+                if (userProfile && !userProfile.teamId) {
+                    await assignStudentToTeam(userProfile);
+                }
+            }
+            setIsProcessingLogin(false);
+        } else {
+            clearUserData();
         }
-
-        const userDomain = userEmail?.split('@')[1];
-        if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
-          await signOut(auth);
-          setAuthError({ title: "Unauthorized Domain", message: "Please sign in with an authorized domain account." });
-          clearUserData();
-          setIsLoading(false);
-          return;
-        }
-
-        if (!userRole) {
-          await signOut(auth);
-          setAuthError({ title: "Access Denied", message: "Your account role is not authorized for this application." });
-          clearUserData();
-          setIsLoading(false);
-          return;
-        }
-
-        setUser(firebaseUser);
-        setRole(userRole);
-
-        if (userRole === 'Student') {
-          const userProfile = await findOrCreateUser(firebaseUser);
-          if (userProfile && !userProfile.teamId) {
-              await assignStudentToTeam(userProfile);
-          }
-        }
-      } else {
-        clearUserData();
-      }
-      setIsLoading(false);
+        setIsLoading(false);
     });
     
     return () => {
         authUnsub();
         settingsUnsub();
     };
-  }, [loginSettings, clearUserData]);
+  }, [loginSettings]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
@@ -151,6 +158,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       await signOut(auth);
       clearUserData();
+      setAuthError(null);
     } catch (error: any) {
       console.error("Sign Out Error:", error);
       setAuthError({ title: 'Sign Out Error', message: "There was a problem signing you out. Please try again." });
@@ -160,7 +168,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     role,
-    isLoading,
+    isLoading: isLoading && !isProcessingLogin,
     isSigningIn,
     isFirebaseConfigured,
     authError,
