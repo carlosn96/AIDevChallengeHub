@@ -64,11 +64,6 @@ export async function getUserRole(email: string): Promise<UserRole> {
     if (isStudentFormat) {
       return 'Student';
     }
-    
-    // 3. Fallback for other formats (e.g., simple gmail accounts)
-    if (domain === 'gmail.com') {
-      return 'Student';
-    }
   
     // Default to null if no specific role is matched
     return null;
