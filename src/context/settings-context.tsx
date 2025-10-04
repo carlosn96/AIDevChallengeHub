@@ -149,7 +149,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     
     return () => authUnsub();
-  }, [loginSettings, isProcessingLogin, clearUserData, handleSignOutAndSetError]); // Dependencias necesarias
+  }, [isProcessingLogin, clearUserData, handleSignOutAndSetError]); // loginSettings is removed
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
