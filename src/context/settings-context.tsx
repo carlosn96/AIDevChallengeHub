@@ -52,58 +52,62 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // Subscribe to login settings
     const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
         if (doc.exists()) {
             setLoginSettings(doc.data() as LoginSettings);
         } else {
-            // Default to enabled if not set
             setLoginSettings({ enabled: true, disabledMessage: 'Login is temporarily disabled.' });
         }
     });
 
     if (auth) {
       const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
+        setIsLoading(true);
+        setAuthError(null);
+
         if (firebaseUser) {
           const userEmail = firebaseUser.email;
           const userDomain = userEmail?.split('@')[1];
 
-          if (userEmail && userDomain && ALLOWED_DOMAINS.includes(userDomain)) {
-            
-            const userRole = await getUserRole(userEmail);
-            
-            if (userRole) { // If a role is determined
-              setUser(firebaseUser);
-              setRole(userRole);
-
-              if (userRole === 'Student') {
-                const userProfile = await findOrCreateUser(firebaseUser);
-                // If user is a student and has no team, try to assign one.
-                if (userProfile && !userProfile.teamId) {
-                    await assignStudentToTeam(userProfile);
-                }
-              }
-            } else {
-              // No role could be determined for the user
-              await signOut(auth);
-              setAuthError({
-                title: "Access Denied",
-                message: "Your account role is not authorized for this application."
-              });
-              clearUserData();
-            }
-
-          } else {
-            // Domain is not in the allowed list
+          if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
             await signOut(auth);
-            setAuthError({
-                title: "Unauthorized Domain",
-                message: `Please sign in with an authorized domain account.`
-            });
+            setAuthError({ title: "Unauthorized Domain", message: "Please sign in with an authorized domain account." });
             clearUserData();
+            setIsLoading(false);
+            return;
           }
+          
+          const userRole = await getUserRole(userEmail);
+
+          if (!userRole) {
+            await signOut(auth);
+            setAuthError({ title: "Access Denied", message: "Your account role is not authorized for this application." });
+            clearUserData();
+            setIsLoading(false);
+            return;
+          }
+
+          // **CRITICAL**: Check if login is disabled for non-managers
+          if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
+            await signOut(auth);
+            setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
+            clearUserData();
+            setIsLoading(false);
+            return;
+          }
+
+          // If all checks pass, set user data
+          setUser(firebaseUser);
+          setRole(userRole);
+
+          if (userRole === 'Student') {
+            const userProfile = await findOrCreateUser(firebaseUser);
+            if (userProfile && !userProfile.teamId) {
+                await assignStudentToTeam(userProfile);
+            }
+          }
+
         } else {
-          // No user is signed in
           clearUserData();
         }
         setIsLoading(false);
@@ -118,7 +122,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           settingsUnsub();
       };
     }
-  }, [clearUserData]);
+  }, [clearUserData, loginSettings]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
@@ -126,37 +130,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    if (!loginSettings?.enabled) {
+    // This check is now handled in onAuthStateChanged, but we can keep it here
+    // for an immediate feedback UX, while ensuring managers are not blocked.
+    if (loginSettings && !loginSettings.enabled && role !== 'Manager' && !user) {
         setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
         return;
     }
 
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account',
-    });
+    provider.setCustomParameters({ prompt: 'select_account' });
 
     setIsSigningIn(true);
     setAuthError(null);
 
     try {
-        const result = await signInWithPopup(auth, provider);
-        const userEmail = result.user.email;
-        const userDomain = userEmail?.split('@')[1];
-
-        if (!userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
-          await signOut(auth);
-          setAuthError({
-            title: "Unauthorized Domain",
-            message: `Please sign in with an authorized domain account.`
-          });
-        }
-
+        await signInWithPopup(auth, provider);
+        // onAuthStateChanged will handle the rest of the logic
     } catch (error: any) {
-        if (error.code === 'auth/popup-closed-by-user') {
-            console.log("Sign-in popup closed by user.");
-        } else if (error.code === 'auth/cancelled-popup-request') {
-             console.log("Sign-in popup request cancelled.");
+        if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+            console.log("Sign-in popup was not completed.");
         } else {
             setAuthError({ title: "Authentication Error", message: "Could not complete the sign-in process. Please try again." });
             console.error("Google Sign-In Error:", error);
