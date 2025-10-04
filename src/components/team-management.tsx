@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -59,15 +60,18 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
   };
 
   const filteredTeams = useMemo(() => {
-    if (!searchTerm.trim()) {
+    const lowercasedSearchTerm = searchTerm.toLowerCase().trim();
+    if (!lowercasedSearchTerm) {
       return teams;
     }
-    return teams.filter(team =>
-      team.memberIds.some(memberId => {
+    return teams.filter(team => {
+      const teamNameMatch = team.name.toLowerCase().includes(lowercasedSearchTerm);
+      const memberNameMatch = team.memberIds.some(memberId => {
         const member = usersMap.get(memberId);
-        return member?.displayName?.toLowerCase().includes(searchTerm.toLowerCase());
-      })
-    );
+        return member?.displayName?.toLowerCase().includes(lowercasedSearchTerm);
+      });
+      return teamNameMatch || memberNameMatch;
+    });
   }, [teams, searchTerm, usersMap]);
 
   return (
@@ -86,7 +90,7 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
             <div className="relative w-full sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Filter by member name..."
+                    placeholder="Filter by team or member..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9"
