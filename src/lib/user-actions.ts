@@ -13,10 +13,11 @@ import {
   runTransaction,
   updateDoc,
   deleteDoc,
-  addDoc
+  addDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day } from './db-types';
 import { getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -229,18 +230,66 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
 
 // --- Manager Actions ---
 
-export const createOrUpdateEvent = async (event: Omit<ScheduleEvent, 'id'> & { id?: string }): Promise<string> => {
+// Day Actions
+export const createDay = async (day: Omit<Day, 'id' | 'createdAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");
-  
-  if (event.id) {
-    const eventRef = doc(db, 'schedule', event.id);
-    await updateDoc(eventRef, event);
-    return event.id;
-  } else {
-    const collectionRef = collection(db, 'schedule');
-    const newDocRef = await addDoc(collectionRef, event);
-    return newDocRef.id;
-  }
+  const newDocRef = await addDoc(collection(db, 'days'), {
+    ...day,
+    createdAt: serverTimestamp(),
+  });
+  return newDocRef.id;
+};
+
+export const updateDay = async (dayId: string, data: Partial<Omit<Day, 'id'>>) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  await updateDoc(doc(db, 'days', dayId), data);
+};
+
+export const deleteDay = async (dayId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const batch = writeBatch(db);
+
+  // 1. Delete the day document
+  batch.delete(doc(db, 'days', dayId));
+
+  // 2. Find and delete all events associated with this day
+  const eventsQuery = query(collection(db, 'schedule'), where('dayId', '==', dayId));
+  const eventsSnapshot = await getDocs(eventsQuery);
+  eventsSnapshot.forEach(eventDoc => {
+    batch.delete(eventDoc.ref);
+  });
+
+  await batch.commit();
+};
+
+
+// Event Actions
+export const createOrUpdateEvent = async (
+    event: Omit<ScheduleEvent, 'id' | 'startTime' | 'endTime'> & {
+        id?: string;
+        startTime: Date | Timestamp;
+        endTime: Date | Timestamp;
+    }
+): Promise<string> => {
+    if (!db) throw new Error("Firestore is not initialized.");
+
+    // Convert JS Dates to Firestore Timestamps if necessary
+    const eventData = {
+        ...event,
+        startTime: event.startTime instanceof Date ? Timestamp.fromDate(event.startTime) : event.startTime,
+        endTime: event.endTime instanceof Date ? Timestamp.fromDate(event.endTime) : event.endTime,
+    };
+    
+    if (eventData.id) {
+        const eventRef = doc(db, 'schedule', eventData.id);
+        const { id, ...dataToUpdate } = eventData;
+        await updateDoc(eventRef, dataToUpdate);
+        return eventData.id;
+    } else {
+        const { id, ...dataToCreate } = eventData;
+        const newDocRef = await addDoc(collection(db, 'schedule'), dataToCreate);
+        return newDocRef.id;
+    }
 };
 
 export const deleteEvent = async (eventId: string) => {
@@ -249,6 +298,8 @@ export const deleteEvent = async (eventId: string) => {
   await deleteDoc(eventRef);
 };
 
+
+// Project Actions
 export const createProject = async (project: Omit<Project, 'id' | 'createdAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");
   const collectionRef = collection(db, 'projects');

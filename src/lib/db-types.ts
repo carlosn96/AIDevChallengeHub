@@ -26,11 +26,18 @@ export type Project = {
   createdAt: Timestamp;
 };
 
-export type ScheduleEvent = {
+export type Day = {
   id: string;
   title: string;
+  date: Timestamp;
+  createdAt: Timestamp;
+};
+
+export type ScheduleEvent = {
+  id: string;
+  dayId: string;
+  title: string;
   type: 'conference' | 'workshop' | 'challenge' | 'ceremony';
-  day: 'Day 1' | 'Day 2' | 'Day 3';
   startTime: Timestamp;
   endTime: Timestamp;
   description: string;

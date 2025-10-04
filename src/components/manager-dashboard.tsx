@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Calendar, FolderKanban, Loader2 } from 'lucide-react';
-import { type Team, type UserProfile, type Project, type ScheduleEvent } from '@/lib/db-types';
+import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
 import ScheduleManagement from './schedule-management';
@@ -16,6 +16,7 @@ export default function ManagerDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+  const [days, setDays] = useState<Day[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function ManagerDashboard() {
         users: collection(db, 'users'),
         projects: collection(db, 'projects'),
         schedule: collection(db, 'schedule'),
+        days: collection(db, 'days'),
     };
 
     unsubscribes.push(onSnapshot(query(collections.teams, orderBy('createdAt', 'desc')), (snapshot) => {
@@ -45,19 +47,14 @@ export default function ManagerDashboard() {
     }));
 
     unsubscribes.push(onSnapshot(query(collections.schedule, orderBy('startTime', 'asc')), (snapshot) => {
-        setSchedule(snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                // Firestore Timestamps are converted to JS Dates for use in the components
-                startTime: data.startTime.toDate(),
-                endTime: data.endTime.toDate(),
-            } as ScheduleEvent
-        }));
+        setSchedule(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEvent)));
+    }));
+    
+    unsubscribes.push(onSnapshot(query(collections.days, orderBy('date', 'asc')), (snapshot) => {
+        setDays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Day)));
+        setIsLoading(false);
     }));
 
-    setIsLoading(false);
 
     return () => unsubscribes.forEach(unsub => unsub());
   }, []);
@@ -101,7 +98,7 @@ export default function ManagerDashboard() {
             <TeamManagement teams={teams} users={users} projects={projects} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-6">
-            <ScheduleManagement schedule={schedule} />
+            <ScheduleManagement schedule={schedule} days={days} />
         </TabsContent>
         <TabsContent value="projects" className="mt-6">
             <ProjectManagement projects={projects} />
