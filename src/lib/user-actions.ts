@@ -11,10 +11,12 @@ import {
   serverTimestamp,
   limit,
   runTransaction,
-  updateDoc
+  updateDoc,
+  deleteDoc,
+  addDoc
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
-import { type UserProfile, type Team } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project } from './db-types';
 import { getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -110,8 +112,8 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         const teamDocInTransaction = await transaction.get(currentTeamRef);
         if (teamDocInTransaction.exists()) {
            const teamData = teamDocInTransaction.data();
-           const memberIds = teamData.memberIds || [];
-           if (memberIds.includes(userProfile.uid)) {
+           const memberIds = new Set(teamData.memberIds || []);
+           if (memberIds.has(userProfile.uid)) {
               console.log(`User ${userProfile.uid} is already a member of a valid team: ${userProfileInTransaction.teamId}. No action needed.`);
               return;
            }
@@ -127,45 +129,38 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         limit(1)
       );
       
-      // Execute the query to find an open team. Note: getDocs is not a transactional read.
-      // We will re-check the team's status inside the transaction.
       const querySnapshot = await getDocs(q);
 
       let teamId: string;
       let teamRef;
 
       if (!querySnapshot.empty) {
-        // Found a potential team. We must now read it transactionally.
         const potentialTeamDoc = querySnapshot.docs[0];
         teamRef = potentialTeamDoc.ref;
         const teamDocInTransaction = await transaction.get(teamRef);
 
         if (teamDocInTransaction.exists()) {
             const teamData = teamDocInTransaction.data();
-            const currentMemberIds = teamData.memberIds || [];
+            const currentMemberIds = new Set(teamData.memberIds || []);
             
-            // Re-verify count and membership inside the transaction
-            if (currentMemberIds.length < MAX_TEAM_MEMBERS && !currentMemberIds.includes(userProfile.uid)) {
+            if (currentMemberIds.size < MAX_TEAM_MEMBERS && !currentMemberIds.has(userProfile.uid)) {
               teamId = teamDocInTransaction.id;
               console.log(`Found open team inside transaction: ${teamId}`);
               
-              const newMemberIds = [...currentMemberIds, userProfile.uid];
+              currentMemberIds.add(userProfile.uid);
               
               transaction.update(teamRef, {
-                memberIds: newMemberIds,
-                memberCount: newMemberIds.length,
+                memberIds: Array.from(currentMemberIds),
+                memberCount: currentMemberIds.size,
               });
 
-              // Update the user's profile with the new teamId
               transaction.update(userRef, { teamId });
               console.log(`User ${userProfile.uid} successfully assigned to team ${teamId}.`);
-              return; // Exit after successful assignment
+              return;
             }
         }
       }
       
-      // If we reach here, it means either no open teams were found, or the one we found was filled.
-      // So, we create a new team.
       console.log("No open teams found or candidate team was filled. Creating a new one.");
       const newTeamRef = doc(collection(db, 'teams'));
       teamId = newTeamRef.id;
@@ -179,7 +174,6 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
       };
       transaction.set(teamRef, newTeamData);
       
-      // Finally, update the user's profile with the new teamId
       transaction.update(userRef, { teamId });
       console.log(`User ${userProfile.uid} successfully assigned to new team ${teamId}.`);
     });
@@ -218,12 +212,10 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
   }
 
   const usersRef = collection(db, 'users');
-  // Firestore 'in' queries are limited to 30 items.
-  // If you expect more, you'll need to batch the requests.
   if (memberIds.length > 30) {
     console.warn("Fetching more than 30 team members, this may require batching.");
   }
-  const q = query(usersRef, where('uid', 'in', memberIds));
+  const q = query(usersRef, where('uid', 'in', memberIds.slice(0, 30)));
   
   try {
     const querySnapshot = await getDocs(q);
@@ -233,4 +225,44 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
     console.error("Error fetching team members: ", error);
     return [];
   }
+};
+
+// --- Manager Actions ---
+
+export const createOrUpdateEvent = async (event: Omit<ScheduleEvent, 'id'> & { id?: string }): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  
+  if (event.id) {
+    const eventRef = doc(db, 'schedule', event.id);
+    await updateDoc(eventRef, event);
+    return event.id;
+  } else {
+    const collectionRef = collection(db, 'schedule');
+    const newDocRef = await addDoc(collectionRef, event);
+    return newDocRef.id;
+  }
+};
+
+export const deleteEvent = async (eventId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const eventRef = doc(db, 'schedule', eventId);
+  await deleteDoc(eventRef);
+};
+
+export const createProject = async (project: Omit<Project, 'id' | 'createdAt'>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const collectionRef = collection(db, 'projects');
+  const newDocRef = await addDoc(collectionRef, {
+    ...project,
+    createdAt: serverTimestamp(),
+  });
+  return newDocRef.id;
+};
+
+export const assignProjectToTeam = async (teamId: string, projectId: string | null) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const teamRef = doc(db, 'teams', teamId);
+  await updateDoc(teamRef, {
+    projectId: projectId,
+  });
 };

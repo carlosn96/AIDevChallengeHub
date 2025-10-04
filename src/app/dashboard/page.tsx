@@ -2,6 +2,7 @@
 
 import ScheduleDashboard from '@/components/schedule-dashboard';
 import StudentDashboard from '@/components/student-dashboard';
+import ManagerDashboard from '@/components/manager-dashboard';
 import { useSettings } from '@/context/settings-context';
 import { LoadingScreen } from '@/components/loading-screen';
 
@@ -13,11 +14,15 @@ export default function DashboardPage() {
   }
 
   // Render the appropriate dashboard based on the user's role
+  if (role === 'Manager') {
+    return <ManagerDashboard />;
+  }
+
   if (role === 'Student') {
     return <StudentDashboard />;
   }
   
-  if (role === 'Teacher' || role === 'Admin' || role === 'Manager') {
+  if (role === 'Teacher' || role === 'Admin') {
     return (
       <div className="w-full">
         <ScheduleDashboard />

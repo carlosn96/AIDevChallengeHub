@@ -18,3 +18,21 @@ export type Team = {
   memberCount: number;
   createdAt: Timestamp;
 };
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Timestamp;
+};
+
+export type ScheduleEvent = {
+  id: string;
+  title: string;
+  type: 'conference' | 'workshop' | 'challenge' | 'ceremony';
+  day: 'Day 1' | 'Day 2' | 'Day 3';
+  startTime: Timestamp;
+  endTime: Timestamp;
+  description: string;
+  location: string;
+};
