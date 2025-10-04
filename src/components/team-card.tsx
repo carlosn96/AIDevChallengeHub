@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { UserProfile } from '@/lib/db-types';
+import type { UserProfile, Project } from '@/lib/db-types';
 import type { Team } from '@/lib/db-types';
 import {
   Card,
@@ -20,14 +20,21 @@ import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle } from 'lucide-re
 import { updateTeamName } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type TeamCardProps = {
   team: Team;
   members: UserProfile[];
   currentUserId: string;
+  project: Project | null;
 };
 
-export default function TeamCard({ team, members, currentUserId }: TeamCardProps) {
+export default function TeamCard({ team, members, currentUserId, project }: TeamCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [teamName, setTeamName] = useState(team.name);
   const [isSaving, setIsSaving] = useState(false);
@@ -165,10 +172,21 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
                     <FileCode className="h-4 w-4 text-primary" />
                     Assigned Project
                 </h3>
-                {team.projectId ? (
-                    <div className="text-xs bg-muted/50 border border-border/50 rounded-md px-3 py-2 font-mono break-words">
-                        {team.projectId}
-                    </div>
+                {project ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-sm bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-help">
+                          <p className="font-semibold truncate">{project.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{project.description}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" align="start" className="max-w-xs">
+                        <p className="font-bold">{project.name}</p>
+                        <p>{project.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <HelpCircle className="h-4 w-4" />

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
-import { type UserProfile, type Team as DbTeam } from '@/lib/db-types';
+import { type UserProfile, type Team as DbTeam, type Project } from '@/lib/db-types';
 import { getTeamMembers, assignStudentToTeam } from '@/lib/user-actions';
 import { Loader2, Users, Calendar, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ export default function StudentDashboard() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [myTeam, setMyTeam] = useState<DbTeam | null>(null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const [assignedProject, setAssignedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -24,26 +25,41 @@ export default function StudentDashboard() {
       setIsLoading(false);
       return;
     }
-  
+
     // Reset states on user change
     setIsLoading(true);
     setUserProfile(null);
     setMyTeam(null);
     setTeamMembers([]);
-  
+    setAssignedProject(null);
+
     const unsubUser = onSnapshot(
       doc(db, 'users', user.uid),
       (userDoc) => {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
-  
+
           if (profile.teamId) {
             const unsubTeam = onSnapshot(
               doc(db, 'teams', profile.teamId),
               async (teamDoc) => {
                 if (teamDoc.exists()) {
-                  setMyTeam({ id: teamDoc.id, ...teamDoc.data() } as DbTeam);
+                  const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
+                  setMyTeam(teamData);
+
+                  // If team has a project, fetch it
+                  if (teamData.projectId) {
+                    const projectRef = doc(db, 'projects', teamData.projectId);
+                    const projectSnap = await getDoc(projectRef);
+                    if (projectSnap.exists()) {
+                      setAssignedProject({ id: projectSnap.id, ...projectSnap.data() } as Project);
+                    } else {
+                      setAssignedProject(null);
+                    }
+                  } else {
+                    setAssignedProject(null);
+                  }
                 } else {
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
                   setMyTeam(null);
@@ -76,7 +92,7 @@ export default function StudentDashboard() {
         setIsLoading(false);
       }
     );
-  
+
     return () => unsubUser();
   }, [user]);
 
@@ -223,6 +239,7 @@ export default function StudentDashboard() {
               team={myTeam!}
               members={teamMembers}
               currentUserId={user?.uid || ''}
+              project={assignedProject}
             />
           </div>
         </div>
