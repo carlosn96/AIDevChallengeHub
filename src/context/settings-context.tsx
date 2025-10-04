@@ -58,31 +58,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             
             const userRole = await getUserRole(userEmail);
             
-            if (userRole === 'Student') {
-              const userProfile = await findOrCreateUser(firebaseUser);
+            if (userRole) { // If a role is determined
               setUser(firebaseUser);
-              setRole('Student');
+              setRole(userRole);
 
-              // If user is a student and has no team, try to assign one.
-              if (userProfile && !userProfile.teamId) {
-                  await assignStudentToTeam(userProfile);
+              if (userRole === 'Student') {
+                const userProfile = await findOrCreateUser(firebaseUser);
+                // If user is a student and has no team, try to assign one.
+                if (userProfile && !userProfile.teamId) {
+                    await assignStudentToTeam(userProfile);
+                }
               }
-            } else if (userRole === 'Teacher' || userRole === 'Admin') {
-                // For teachers and admins, we grant access without creating a DB record.
-                // Their experience is managed by the role determined from their email or the permissions doc.
-                setUser(firebaseUser);
-                setRole(userRole);
             } else {
-              // Not a student, teacher, or admin, or role is null
+              // No role could be determined for the user
               await signOut(auth);
               setAuthError({
                 title: "Access Denied",
-                message: "Your account role could not be determined or is not authorized."
+                message: "Your account role is not authorized for this application."
               });
               clearUserData();
             }
 
           } else {
+            // Domain is not in the allowed list
             await signOut(auth);
             setAuthError({
                 title: "Unauthorized Domain",
@@ -91,6 +89,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             clearUserData();
           }
         } else {
+          // No user is signed in
           clearUserData();
         }
         setIsLoading(false);
