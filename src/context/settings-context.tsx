@@ -85,6 +85,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         
         setIsLoading(true);
         setIsProcessingLogin(true);
+        setAuthError(null); // Clear previous errors on a new auth attempt
 
         const userEmail = firebaseUser.email;
         const userRole = await getUserRole(userEmail || '');
@@ -114,13 +115,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // If all checks pass, set the user
+        // If all checks pass, create/update user profile and set user state
+        const userProfile = await findOrCreateUser(firebaseUser);
         setUser(firebaseUser);
         setRole(userRole);
-        setAuthError(null); // Clear any previous errors
-
+        
         if (userRole === 'Student') {
-            const userProfile = await findOrCreateUser(firebaseUser);
             // Safely check if the user profile exists and needs a team.
             if (userProfile && !userProfile.teamId) {
                 await assignStudentToTeam(userProfile);
