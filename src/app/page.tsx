@@ -2,20 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
+import { Sparkles, Bot, Trophy, AlertCircle, Rocket } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSettings } from '@/context/settings-context';
 
 
 const Logo = () => (
-    <div className="inline-block p-4 rounded-full card-glass mb-6">
-      <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-accent">
-          <path d="M50 20L20 80H80L50 20Z" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M35 60H65" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-      </svg>
+    <div className="inline-block p-4 rounded-full card-glass mb-6 logo-ring">
+        <Rocket className="h-16 w-16 text-accent" style={{
+            filter: `drop-shadow(0 0 10px hsl(var(--accent))) drop-shadow(0 0 20px hsl(var(--accent) / 0.5))`
+        }}/>
     </div>
-  );
+);
 
 export default function LoginPage() {
   const {
@@ -32,18 +31,20 @@ export default function LoginPage() {
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
 
   useEffect(() => {
-    // Generate particles only on the client-side to prevent hydration mismatch
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      speed: Math.random() * 15 + 10,
-      delay: Math.random() * 5,
-      xEnd: Math.random() * 20 - 10
-    }));
-    setParticles(newParticles);
-  }, []);
+    if (!isLoading) {
+        // Generate particles only on the client-side to prevent hydration mismatch
+        const newParticles = Array.from({ length: 50 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 3 + 1,
+        speed: Math.random() * 15 + 10,
+        delay: Math.random() * 5,
+        xEnd: Math.random() * 20 - 10
+        }));
+        setParticles(newParticles);
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (!isLoading && user) {

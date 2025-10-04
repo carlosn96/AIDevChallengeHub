@@ -12,14 +12,18 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon, LifeBuoy, Settings } from "lucide-react";
+import { LogOut, User as UserIcon, LifeBuoy, Settings, Rocket } from "lucide-react";
 import { useSettings } from "@/context/settings-context";
 
 const Logo = () => (
-    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
-        <path d="M50 20L20 80H80L50 20Z" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M35 60H65" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
-    </svg>
+    <Link href="/dashboard" className="flex items-center space-x-2">
+      <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
+         <Rocket className="h-6 w-6 text-primary" />
+      </div>
+      <span className="font-bold sm:inline-block">
+        AIDev Challenge Hub
+      </span>
+    </Link>
   );
   
 export default function Header() {
@@ -38,12 +42,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <div className="mr-4 flex">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <Logo />
-            <span className="font-bold sm:inline-block">
-              AIDev Challenge Hub
-            </span>
-          </Link>
+          <Logo />
         </div>
 
         {user && (
