@@ -24,25 +24,27 @@ const MAX_TEAM_MEMBERS = 3;
  * @returns The user profile object or null if not found.
  */
 export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  if (!db) return null;
   const userDocRef = doc(db, 'users', uid);
   const userDocSnap = await getDoc(userDocRef);
   return userDocSnap.exists() ? (userDocSnap.data() as UserProfile) : null;
 };
 
 /**
- * Checks if a user exists, and if not, creates their profile and assigns them to a team.
- * This function is intended to be called upon user login.
+ * Checks if a user exists, and if not, creates their profile.
+ * This function is intended to be called upon user login for ANY valid user.
  * @param user The Firebase Auth User object.
+ * @returns The user's profile, either existing or newly created.
  */
-export const findOrCreateUser = async (user: User) => {
+export const findOrCreateUser = async (user: User): Promise<UserProfile | null> => {
+  if (!db) return null;
   const userProfile = await getUserProfile(user.uid);
 
   if (userProfile) {
     console.log(`User ${user.uid} already exists.`);
-    return; // User already exists, no action needed.
+    return userProfile;
   }
 
-  // User does not exist, create a new profile.
   console.log(`Creating new user profile for ${user.uid}`);
   const newUserProfile: UserProfile = {
     uid: user.uid,
@@ -50,26 +52,27 @@ export const findOrCreateUser = async (user: User) => {
     displayName: user.displayName,
     photoURL: user.photoURL,
     role: getUserRole(user.email!),
-    createdAt: serverTimestamp() as any, // Let the server set the timestamp
+    createdAt: serverTimestamp() as any,
   };
-
-  // The assignment logic should only run for students who are not yet in a team.
-  if (newUserProfile.role === 'Student' && !newUserProfile.teamId) {
-    await assignUserToTeam(newUserProfile);
-  } else {
-    // For non-students or students somehow already with a teamId, just save their profile.
-    const userDocRef = doc(db, 'users', user.uid);
-    await setDoc(userDocRef, newUserProfile);
-  }
+  
+  const userDocRef = doc(db, 'users', user.uid);
+  await setDoc(userDocRef, newUserProfile);
+  
+  return newUserProfile;
 };
 
+
 /**
- * Assigns a user to a team with available spots, or creates a new team if none are available.
+ * Assigns a student user to a team with available spots, or creates a new team.
  * This operation is performed within a transaction to ensure atomicity.
  * @param userProfile The profile of the user to be assigned.
  */
-export const assignUserToTeam = async (userProfile: UserProfile) => {
-  console.log(`Assigning team for user ${userProfile.uid}`);
+export const assignStudentToTeam = async (userProfile: UserProfile) => {
+  if (!db || userProfile.role !== 'Student' || userProfile.teamId) {
+    return; // Only assign students without a team
+  }
+
+  console.log(`Assigning team for student ${userProfile.uid}`);
   const teamsRef = collection(db, 'teams');
   const userRef = doc(db, 'users', userProfile.uid);
   
@@ -82,7 +85,7 @@ export const assignUserToTeam = async (userProfile: UserProfile) => {
         limit(1)
       );
       
-      const querySnapshot = await transaction.get(q);
+      const querySnapshot = await getDocs(q);
 
       let teamId: string;
       let teamRef;
@@ -119,7 +122,7 @@ export const assignUserToTeam = async (userProfile: UserProfile) => {
       }
       
       // Finally, update the user's profile with the new teamId
-      transaction.set(userRef, { ...userProfile, teamId });
+      transaction.update(userRef, { teamId });
     });
     console.log(`Successfully assigned user ${userProfile.uid} to team.`);
   } catch (e) {

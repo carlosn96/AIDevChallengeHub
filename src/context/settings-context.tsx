@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
-import { findOrCreateUser } from '@/lib/user-actions';
+import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 
 const ALLOWED_DOMAIN = "universidad-une.com";
 
@@ -53,12 +53,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (firebaseUser) {
           const userEmail = firebaseUser.email;
           if (userEmail && userEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
+            
+            const userProfile = await findOrCreateUser(firebaseUser);
             setUser(firebaseUser);
-            const userRole = getUserRole(userEmail);
-            setRole(userRole);
-            if (userRole === 'Student' && db) {
-              await findOrCreateUser(firebaseUser);
+            setRole(userProfile?.role || null); // Use role from DB profile
+
+            // If user is a student and has no team, try to assign one.
+            if (userProfile && userProfile.role === 'Student' && !userProfile.teamId) {
+                await assignStudentToTeam(userProfile);
             }
+
           } else {
             await signOut(auth);
             setAuthError({
