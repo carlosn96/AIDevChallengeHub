@@ -49,6 +49,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
     clearUserData();
     setAuthError(error);
+    setIsLoading(false);
+    setIsProcessingLogin(false);
   }, [clearUserData]);
 
   // EFECTO 1: Escuchar cambios en loginSettings (separado)
@@ -149,7 +151,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     
     return () => authUnsub();
-  }, [isProcessingLogin, clearUserData, handleSignOutAndSetError]); // loginSettings is removed
+  }, [isProcessingLogin, clearUserData, handleSignOutAndSetError, loginSettings]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
