@@ -6,7 +6,8 @@ import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/l
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 
-const ALLOWED_DOMAIN = "universidad-une.com";
+//const ALLOWED_DOMAIN = "universidad-une.com"; // primary domain
+const ALLOWED_DOMAIN = "gmail.com"; // dev domain
 
 type AuthError = {
   title: string;
