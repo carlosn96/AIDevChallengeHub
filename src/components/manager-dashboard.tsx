@@ -28,44 +28,47 @@ export default function ManagerDashboard() {
     };
 
     const unsubscribes: (() => void)[] = [];
-    const collections = {
-        teams: collection(db, 'teams'),
-        users: collection(db, 'users'),
-        projects: collection(db, 'projects'),
-        schedule: collection(db, 'schedule'),
-        days: collection(db, 'days'),
-        loginSettings: doc(db, 'settings', 'login'),
+    let loadingCounter = 6;
+    const onDataLoaded = () => {
+        loadingCounter--;
+        if (loadingCounter === 0) {
+            setIsLoading(false);
+        }
     };
 
-    unsubscribes.push(onSnapshot(query(collections.teams, orderBy('createdAt', 'desc')), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(collection(db, 'teams'), orderBy('createdAt', 'desc')), (snapshot) => {
         setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
 
-    unsubscribes.push(onSnapshot(query(collections.users, orderBy('createdAt', 'desc')), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snapshot) => {
         setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
     
-    unsubscribes.push(onSnapshot(query(collections.projects, orderBy('createdAt', 'desc')), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(collection(db, 'projects'), orderBy('createdAt', 'desc')), (snapshot) => {
         setProjects(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)));
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
 
-    unsubscribes.push(onSnapshot(query(collections.schedule, orderBy('startTime', 'asc')), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(collection(db, 'schedule'), orderBy('startTime', 'asc')), (snapshot) => {
         setSchedule(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEvent)));
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
     
-    unsubscribes.push(onSnapshot(query(collections.days, orderBy('date', 'asc')), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(collection(db, 'days'), orderBy('date', 'asc')), (snapshot) => {
         setDays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Day)));
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
 
-    unsubscribes.push(onSnapshot(collections.loginSettings, (snapshot) => {
+    unsubscribes.push(onSnapshot(doc(db, 'settings', 'login'), (snapshot) => {
         if (snapshot.exists()) {
             setLoginSettings(snapshot.data() as LoginSettings);
         } else {
-            // Initialize with default settings if it doesn't exist
             setLoginSettings({ enabled: true, disabledMessage: 'Login is currently disabled by an administrator.' });
         }
-        setIsLoading(false);
-    }));
+        onDataLoaded();
+    }, () => onDataLoaded()));
 
 
     return () => unsubscribes.forEach(unsub => unsub());

@@ -5,11 +5,10 @@ import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, sig
 import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
-import { type LoginSettings, type UserProfile } from '@/lib/db-types';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { type LoginSettings } from '@/lib/db-types';
+import { doc, getDoc } from 'firebase/firestore';
 
-//const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx", "admin.com"];
-const ALLOWED_DOMAINS = ["universidad-une.com"]; // for production env
+const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx", "admin.com"];
 
 type AuthError = {
   title: string;
@@ -23,7 +22,7 @@ type SettingsContextType = {
   isSigningIn: boolean;
   isFirebaseConfigured: boolean;
   authError: AuthError | null;
-  loginSettings: LoginSettings | null;
+  loginSettings: LoginSettings | null; // Keep for initial check
   handleGoogleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 };
@@ -37,72 +36,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
-  const [isProcessingLogin, setIsProcessingLogin] = useState(false);
 
-  const clearUserData = useCallback(() => {
+  const clearState = useCallback(() => {
     setUser(null);
     setRole(null);
+    setAuthError(null);
+    setIsLoading(false);
+    setIsSigningIn(false);
   }, []);
 
   const handleSignOutAndSetError = useCallback(async (error: AuthError) => {
     if (auth) {
       await signOut(auth);
     }
-    clearUserData();
+    clearState();
     setAuthError(error);
     setIsLoading(false);
-    setIsProcessingLogin(false);
-  }, [clearUserData]);
-
-  // EFFECT 1: Listen for settings changes
-  useEffect(() => {
-    if (!isFirebaseConfigured || !db) {
-      setAuthError({ 
-        title: 'Configuration Error', 
-        message: firebaseInitializationError || 'Authentication is currently unavailable.' 
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
-      const newLoginSettings = doc.exists() 
-        ? (doc.data() as LoginSettings) 
-        : { enabled: true, disabledMessage: 'Login is temporarily disabled.' };
-      setLoginSettings(newLoginSettings);
-    });
-
-    return () => settingsUnsub();
-  }, []);
-
-  // EFFECT 2: Handle authentication state
+  }, [clearState]);
+  
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) {
+      if (!isFirebaseConfigured) {
+        setAuthError({ 
+          title: 'Configuration Error', 
+          message: firebaseInitializationError || 'Authentication is currently unavailable.' 
+        });
+      }
       setIsLoading(false);
       return;
     }
 
     const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (isProcessingLogin) return;
-
       if (!firebaseUser) {
-        clearUserData();
-        setIsLoading(false);
+        clearState();
         return;
       }
       
       setIsLoading(true);
-      setIsProcessingLogin(true);
       setAuthError(null);
 
       try {
+        // Fetch login settings once on auth change to perform checks
+        const settingsDoc = await getDoc(doc(db!, 'settings', 'login'));
+        const currentLoginSettings = settingsDoc.exists() 
+          ? (settingsDoc.data() as LoginSettings) 
+          : { enabled: true, disabledMessage: 'Login is temporarily disabled.' };
+        setLoginSettings(currentLoginSettings);
+
         const userEmail = firebaseUser.email;
         const userRole = await getUserRole(userEmail || '');
         const userDomain = userEmail?.split('@')[1];
 
-        // This check must happen *after* role is determined
-        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
-          await handleSignOutAndSetError({ title: "Login Disabled", message: loginSettings.disabledMessage });
+        if (currentLoginSettings && !currentLoginSettings.enabled && userRole !== 'Manager') {
+          await handleSignOutAndSetError({ title: "Login Disabled", message: currentLoginSettings.disabledMessage });
           return;
         }
 
@@ -119,10 +105,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const userProfile = await findOrCreateUser(firebaseUser, userRole);
         
         if (userRole === 'Student' && userProfile && !userProfile.teamId) {
-          await assignStudentToTeam(userProfile);
+          assignStudentToTeam(userProfile).catch(err => {
+            console.error("Failed to assign student to team in background:", err);
+          });
         }
-
-        // Now that all background processing is done, set the final state
+        
         setUser(firebaseUser);
         setRole(userRole);
 
@@ -134,12 +121,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         });
       } finally {
         setIsLoading(false);
-        setIsProcessingLogin(false);
       }
     });
     
     return () => authUnsub();
-  }, [isProcessingLogin, loginSettings]); // Correct dependencies
+  }, [handleSignOutAndSetError]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
@@ -177,7 +163,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!isFirebaseConfigured || !auth) return;
     try {
       await signOut(auth);
-      // Let onAuthStateChanged handle the state clearing
+      // onAuthStateChanged will handle clearing state
     } catch (error: any) {
       console.error("Sign Out Error:", error);
       setAuthError({ 
@@ -190,7 +176,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     role,
-    isLoading: isLoading || isProcessingLogin || (auth?.currentUser && !role), // More robust loading state
+    isLoading,
     isSigningIn,
     isFirebaseConfigured,
     authError,
