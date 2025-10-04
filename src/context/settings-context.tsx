@@ -51,13 +51,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    
+
     const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
-        if (doc.exists()) {
-            setLoginSettings(doc.data() as LoginSettings);
-        } else {
-            setLoginSettings({ enabled: true, disabledMessage: 'Login is temporarily disabled.' });
-        }
+      if (doc.exists()) {
+        setLoginSettings(doc.data() as LoginSettings);
+      } else {
+        setLoginSettings({ enabled: true, disabledMessage: 'Login is temporarily disabled.' });
+      }
     });
 
     if (auth) {
@@ -86,8 +86,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
             return;
           }
-
-          // **CRITICAL**: Check if login is disabled for non-managers
+          
           if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
             await signOut(auth);
             setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
@@ -96,7 +95,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // If all checks pass, set user data
           setUser(firebaseUser);
           setRole(userRole);
 
@@ -112,13 +110,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(false);
       });
+      
       return () => {
           authUnsub();
           settingsUnsub();
       };
     } else {
       setIsLoading(false);
-       return () => {
+      return () => {
           settingsUnsub();
       };
     }
@@ -129,12 +128,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
         return;
     }
-
-    // This check is now handled in onAuthStateChanged, but we can keep it here
-    // for an immediate feedback UX, while ensuring managers are not blocked.
-    if (loginSettings && !loginSettings.enabled && role !== 'Manager' && !user) {
-        setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
-        return;
+    
+    // Immediate feedback for non-managers if they try to sign in when it is disabled.
+    // The authoritative check remains in onAuthStateChanged
+    if (loginSettings && !loginSettings.enabled) {
+        const tempRole = user ? role : null;
+        if (tempRole && tempRole !== 'Manager') {
+            setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
+            return;
+        }
     }
 
     const provider = new GoogleAuthProvider();
