@@ -19,6 +19,7 @@ export default function StudentDashboard() {
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [assignedProject, setAssignedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAssigningTeam, setIsAssigningTeam] = useState(false);
 
   useEffect(() => {
     if (!user || !db) {
@@ -28,6 +29,7 @@ export default function StudentDashboard() {
 
     // Reset states on user change
     setIsLoading(true);
+    setIsAssigningTeam(false);
     setUserProfile(null);
     setMyTeam(null);
     setTeamMembers([]);
@@ -41,6 +43,7 @@ export default function StudentDashboard() {
           setUserProfile(profile);
 
           if (profile.teamId) {
+            setIsAssigningTeam(false); // Stop assignment loading state if teamId appears
             const unsubTeam = onSnapshot(
               doc(db, 'teams', profile.teamId),
               async (teamDoc) => {
@@ -48,7 +51,6 @@ export default function StudentDashboard() {
                   const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
                   setMyTeam(teamData);
 
-                  // If team has a project, fetch it
                   if (teamData.projectId) {
                     const projectRef = doc(db, 'projects', teamData.projectId);
                     const projectSnap = await getDoc(projectRef);
@@ -63,6 +65,7 @@ export default function StudentDashboard() {
                 } else {
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
                   setMyTeam(null);
+                  setIsAssigningTeam(true);
                   await assignStudentToTeam(profile);
                 }
                 setIsLoading(false);
@@ -74,15 +77,14 @@ export default function StudentDashboard() {
             );
             return () => unsubTeam();
           } else {
-            // User has a profile but no teamId, trigger assignment
-            if (profile.role === 'Student') {
+            if (profile.role === 'Student' && !isAssigningTeam) {
               console.log(`User ${profile.uid} has no team. Assigning...`);
-              assignStudentToTeam(profile);
+              setIsAssigningTeam(true);
+              assignStudentToTeam(profile); // This is async, the snapshot listener will catch the change
             }
-            setIsLoading(false); // Stop loading to show "Team Pending"
+            setIsLoading(false); // Stop initial loading, but assignment might be in progress
           }
         } else {
-          // User document doesn't exist, which might be a transitional state
           console.warn(`User document for ${user.uid} not found.`);
           setIsLoading(false);
         }
@@ -94,7 +96,7 @@ export default function StudentDashboard() {
     );
 
     return () => unsubUser();
-  }, [user]);
+  }, [user, isAssigningTeam]);
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -116,20 +118,21 @@ export default function StudentDashboard() {
     }
   }, [myTeam]);
 
-  // Loading state
-  if (isLoading) {
+  // Combined loading state
+  if (isLoading || (isAssigningTeam && !myTeam)) {
     return (
       <div className="space-y-6">
-        {/* Header Skeleton */}
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
           <div>
-            <Skeleton className="h-7 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
+            <h1 className="text-xl font-bold">
+              {isAssigningTeam ? 'Finding you a team...' : 'Loading your dashboard...'}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+                {isAssigningTeam ? 'This should only take a moment.' : 'Please wait while we get everything ready.'}
+            </p>
           </div>
         </div>
-
-        {/* Content Skeleton */}
         <div className="grid gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Skeleton className="h-[400px] w-full rounded-2xl" />
@@ -146,7 +149,6 @@ export default function StudentDashboard() {
   if (userProfile && !myTeam) {
     return (
       <div className="space-y-6">
-        {/* Welcome Header */}
         <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           <div className="relative">
@@ -164,7 +166,6 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* No Team Card */}
         <div className="grid gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Card className="border-dashed border-2 border-muted-foreground/25">
@@ -194,7 +195,6 @@ export default function StudentDashboard() {
   // Full dashboard with team
   return (
     <div className="space-y-6">
-      {/* Welcome Header with Stats */}
       <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
         <div className="relative">
@@ -208,7 +208,6 @@ export default function StudentDashboard() {
               </p>
             </div>
 
-            {/* Quick Stats */}
             <div className="flex gap-4">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
                 <Users className="h-4 w-4 text-primary" />
@@ -230,9 +229,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* Team Card - Sidebar */}
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="sticky top-20">
             <TeamCard
@@ -244,7 +241,6 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Schedule Dashboard - Main Content */}
         <div className="lg:col-span-8 xl:col-span-9">
           <ScheduleDashboard />
         </div>
