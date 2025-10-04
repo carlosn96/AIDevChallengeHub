@@ -7,7 +7,7 @@ import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
 import { type UserProfile, type Team as DbTeam } from '@/lib/db-types';
-import { getTeamMembers } from '@/lib/user-actions';
+import { getTeamMembers, assignStudentToTeam } from '@/lib/user-actions';
 import { Loader2, Users, Calendar, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,7 +26,7 @@ export default function StudentDashboard() {
 
     const unsubUser = onSnapshot(
       doc(db, 'users', user.uid),
-      (userDoc) => {
+      async (userDoc) => {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
@@ -34,20 +34,31 @@ export default function StudentDashboard() {
           if (profile.teamId) {
             const unsubTeam = onSnapshot(
               doc(db, 'teams', profile.teamId),
-              (teamDoc) => {
+              async (teamDoc) => {
                 if (teamDoc.exists()) {
                   setMyTeam({ id: teamDoc.id, ...teamDoc.data() } as DbTeam);
+                  setIsLoading(false);
+                } else {
+                  // The user has a teamId, but the team document doesn't exist.
+                  // This is a data inconsistency. We should re-assign the user.
+                  console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
+                  await assignStudentToTeam(profile);
+                  // The user's profile will be updated by the action, which will
+                  // trigger the onSnapshot listener for the user again, restarting this process
+                  // with the new teamId. We keep loading until then.
                 }
-                // We set loading to false here, after team data has been initially processed.
-                // The team members will be fetched in the next effect.
-                setIsLoading(false);
               }
             );
             return () => unsubTeam();
           } else {
+            // No teamId on profile. If they are a student, they should have been assigned one on login.
+            // If we reach here, it might be a race condition or they were just created.
+            // The logic in settings-context should handle assignment.
+            // We can show the "no team" state.
             setIsLoading(false);
           }
         } else {
+          // User document doesn't exist, which shouldn't happen for a logged-in student.
           setIsLoading(false);
         }
       },
