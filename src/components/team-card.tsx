@@ -39,7 +39,7 @@ type TeamCardProps = {
 
 export default function TeamCard({ team, members, currentUserId, project }: TeamCardProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [teamName, setTeamName] = useState(team.name);
+  const [teamName, setTeamName] = useState(team?.name || '');
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
@@ -94,6 +94,10 @@ export default function TeamCard({ team, members, currentUserId, project }: Team
       setIsSaving(false);
     }
   };
+
+  if (!team) {
+    return null; // Don't render if team is not available
+  }
 
   return (
     <Card>

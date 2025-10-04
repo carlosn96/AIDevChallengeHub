@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -37,7 +38,7 @@ export default function StudentDashboard() {
 
     const unsubUser = onSnapshot(
       doc(db, 'users', user.uid),
-      (userDoc) => {
+      async (userDoc) => {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
@@ -65,8 +66,10 @@ export default function StudentDashboard() {
                 } else {
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
                   setMyTeam(null);
-                  setIsAssigningTeam(true);
-                  await assignStudentToTeam(profile);
+                  if (profile.role === 'Student') {
+                    setIsAssigningTeam(true);
+                    await assignStudentToTeam(profile);
+                  }
                 }
                 setIsLoading(false);
               },
@@ -80,9 +83,10 @@ export default function StudentDashboard() {
             if (profile.role === 'Student' && !isAssigningTeam) {
               console.log(`User ${profile.uid} has no team. Assigning...`);
               setIsAssigningTeam(true);
-              assignStudentToTeam(profile); // This is async, the snapshot listener will catch the change
+              await assignStudentToTeam(profile); // This is async, the snapshot listener will catch the change
+            } else {
+              setIsLoading(false); // Stop initial loading, but assignment might be in progress
             }
-            setIsLoading(false); // Stop initial loading, but assignment might be in progress
           }
         } else {
           console.warn(`User document for ${user.uid} not found.`);
@@ -96,7 +100,7 @@ export default function StudentDashboard() {
     );
 
     return () => unsubUser();
-  }, [user, isAssigningTeam]);
+  }, [user]);
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -232,12 +236,12 @@ export default function StudentDashboard() {
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-4 xl:col-span-3">
           <div className="sticky top-20">
-            <TeamCard
-              team={myTeam!}
+            {myTeam && <TeamCard
+              team={myTeam}
               members={teamMembers}
               currentUserId={user?.uid || ''}
               project={assignedProject}
-            />
+            />}
           </div>
         </div>
 
