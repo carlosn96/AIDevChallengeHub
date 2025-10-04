@@ -49,7 +49,7 @@ export async function getUserRole(email: string): Promise<UserRole> {
   // but for this challenge, we will default non-managers to 'Student' or 'Teacher' based on a simple heuristic.
   // For the purpose of this application, we'll assume any .com address not in the manager list is a student.
   if (email.endsWith('.com')) {
-     return 'Student';
+     return 'Teacher';
   }
 
   // Fallback for other domains or more complex rules.

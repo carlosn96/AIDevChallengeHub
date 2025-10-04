@@ -152,11 +152,11 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-8 text-center">
-            <p className="inter text-gray-600 text-sm mb-2">
+            <p className="inter text-muted-foreground text-sm mb-2">
               © 2025 AIDevChallenge
             </p>
-            <p className="inter text-xs text-gray-700">
-              Developed by <span className="text-[#00f2fe] font-semibold">carlosn96</span>
+            <p className="inter text-xs text-muted-foreground/80">
+              Developed by <span className="text-accent/80 font-semibold">carlosn96</span>
             </p>
           </div>
         </div>
