@@ -230,6 +230,67 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
 
 // --- Manager Actions ---
 
+/**
+ * Removes a user from their currently assigned team.
+ * This function is non-destructive to the user account. It only updates the team and user documents.
+ * @param teamId The ID of the team.
+ * @param userId The ID of the user to remove.
+ */
+export const removeUserFromTeam = async (teamId: string, userId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const batch = writeBatch(db);
+
+  // 1. Update the user document to remove their teamId
+  const userRef = doc(db, 'users', userId);
+  batch.update(userRef, { teamId: null });
+
+  // 2. Update the team document to remove the user
+  const teamRef = doc(db, 'teams', teamId);
+  const teamSnap = await getDoc(teamRef);
+  if (teamSnap.exists()) {
+    const teamData = teamSnap.data() as Team;
+    const updatedMemberIds = teamData.memberIds.filter(id => id !== userId);
+    batch.update(teamRef, {
+      memberIds: updatedMemberIds,
+      memberCount: updatedMemberIds.length,
+    });
+  }
+
+  await batch.commit();
+};
+
+/**
+ * Deletes a team and un-assigns all its members.
+ * This is non-destructive to user accounts.
+ * @param teamId The ID of the team to delete.
+ */
+export const deleteTeam = async (teamId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const batch = writeBatch(db);
+  const teamRef = doc(db, 'teams', teamId);
+
+  // 1. Get the team document to find its members
+  const teamSnap = await getDoc(teamRef);
+  if (!teamSnap.exists()) {
+    throw new Error("Team not found!");
+  }
+  const teamData = teamSnap.data() as Team;
+
+  // 2. For each member, update their user profile to remove teamId
+  if (teamData.memberIds && teamData.memberIds.length > 0) {
+    teamData.memberIds.forEach(userId => {
+      const userRef = doc(db, 'users', userId);
+      batch.update(userRef, { teamId: null });
+    });
+  }
+
+  // 3. Delete the team document
+  batch.delete(teamRef);
+
+  await batch.commit();
+};
+
+
 // Day Actions
 export const createDay = async (day: Omit<Day, 'id' | 'createdAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");

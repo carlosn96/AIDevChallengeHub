@@ -52,14 +52,18 @@ The agent MUST treat the functionality described herein as the definitive specif
 -   **Create**: Team creation is **automated**. The system automatically creates teams and assigns users with the 'Student' role to them (`assignStudentToTeam` action). Managers do not create teams manually.
     -   *Adaptation Rule*: The agent must not implement manual team creation functionality for the Manager unless explicitly told to change this core business rule.
 
--   **Read**: Managers can view all teams in a table, displaying the team name, its members (represented by avatars), and the currently assigned project.
-    -   *Adaptation Rule*: If team information is expanded (e.g., adding a team status), the agent should add a new column to the table in `team-management.tsx` to display it.
+-   **Read**: Managers can view all teams in a table. Clicking a team opens a modal displaying its members and the currently assigned project.
+    -   *Adaptation Rule*: If team information is expanded (e.g., adding a team status), the agent should add new columns or display elements to `team-management.tsx` to show it.
 
--   **Update**: The only direct update action a Manager can perform on a team is **assigning a project**. They use a searchable combobox to select a project for a team. They cannot change a team's name or its members directly from this interface.
-    -   *Adaptation Rule*: Student-facing team name changes are handled in the `student-dashboard`. The agent must not add team name editing to the `team-management` component, as this would conflict with the established logic where teams manage their own names.
+-   **Update**: Managers can perform two update actions:
+    1.  **Assign a project**: They use a searchable combobox to select a project for a team.
+    2.  **Remove a member**: From the team details modal, a manager can remove a specific student from a team. This action sets the student's `teamId` to `null`, making them eligible for automatic re-assignment. It does not delete the user account.
+    -   *Adaptation Rule*: The agent must not add team name editing to the `team-management` component, as this conflicts with the logic where students manage their own team names.
 
--   **Delete**: There is no functionality for a Manager to delete a team.
-    -   *Adaptation Rule*: The agent must not introduce team deletion functionality. Team lifecycle is managed automatically.
+-   **Delete**: Managers can delete a team. This action is **non-destructive to user accounts** and triggers the following cascading logic:
+    1.  The `Team` document is deleted from Firestore.
+    2.  The `teamId` field is set to `null` on all `UserProfile` documents for the members of that team. This makes them eligible for automatic re-assignment.
+    -   *Adaptation Rule*: The agent must preserve this cascading logic. The user accounts themselves must not be deleted.
 
 ### 3.3. Schedule (`Day` & `ScheduleEvent` Entities)
 
