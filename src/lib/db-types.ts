@@ -5,7 +5,7 @@ export type UserProfile = {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: 'Student' | 'Teacher' | 'Admin' | null;
+  role: 'Student' | 'Teacher' | 'Admin' | 'Manager' | null;
   teamId?: string;
   createdAt: Timestamp;
 };

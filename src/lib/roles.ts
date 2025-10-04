@@ -2,7 +2,7 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-export type UserRole = 'Student' | 'Teacher' | 'Admin' | null;
+export type UserRole = 'Student' | 'Teacher' | 'Admin' | 'Manager' | null;
 
 /**
  * Checks if a user is an application manager by checking their email
@@ -42,7 +42,7 @@ export async function getUserRole(email: string): Promise<UserRole> {
 
   // Highest priority: check if the user is a designated App Manager.
   if (await isAppManager(email)) {
-    return 'Admin';
+    return 'Manager';
   }
   
   // In a real scenario, you might have more complex logic here based on email patterns,

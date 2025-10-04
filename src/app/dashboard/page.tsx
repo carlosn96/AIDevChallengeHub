@@ -17,7 +17,7 @@ export default function DashboardPage() {
     return <StudentDashboard />;
   }
   
-  if (role === 'Teacher' || role === 'Admin') {
+  if (role === 'Teacher' || role === 'Admin' || role === 'Manager') {
     return (
       <div className="w-full">
         <ScheduleDashboard />

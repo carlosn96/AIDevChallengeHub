@@ -47,9 +47,10 @@ export default function Header() {
 
   const getRoleColor = (role: string) => {
     const colors = {
-      'Teacher': 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+      'Teacher': 'bg-blue-500/10 text-blue-400 border-blue-500/30',
       'Student': 'bg-green-500/10 text-green-500 border-green-500/30',
       'Admin': 'bg-purple-500/10 text-purple-500 border-purple-500/30',
+      'Manager': 'bg-rose-500/10 text-rose-500 border-rose-500/30',
     };
     return colors[role as keyof typeof colors] || 'bg-primary/10 text-primary border-primary/30';
   };
