@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
 import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings } from './db-types';
-import { getUserRole } from './roles';
+import { type UserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
 
@@ -39,9 +39,10 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
  * This prevents duplicate user profiles for the same email address.
  * It also syncs the UID if it has changed (e.g., different auth provider).
  * @param user The Firebase Auth User object.
+ * @param role The user's predetermined role.
  * @returns The user's profile.
  */
-export const findOrCreateUser = async (user: User): Promise<UserProfile | null> => {
+export const findOrCreateUser = async (user: User, role: UserRole): Promise<UserProfile | null> => {
   if (!db || !user.email) return null;
 
   const usersRef = collection(db, 'users');
@@ -59,19 +60,26 @@ export const findOrCreateUser = async (user: User): Promise<UserProfile | null> 
       console.warn(`Existing user has a different UID. Auth UID: ${user.uid}, DB UID: ${existingUserProfile.uid}`);
     }
 
-    // Optionally update display name and photo, as they might change.
-    if (existingUserProfile.displayName !== user.displayName || existingUserProfile.photoURL !== user.photoURL) {
-      await updateDoc(existingUserDoc.ref, {
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-      });
+    // Optionally update display name, photo, and role as they might change.
+    const updates: Partial<UserProfile> = {};
+    if (existingUserProfile.displayName !== user.displayName) {
+        updates.displayName = user.displayName;
+    }
+    if (existingUserProfile.photoURL !== user.photoURL) {
+        updates.photoURL = user.photoURL;
+    }
+    if (existingUserProfile.role !== role) {
+        updates.role = role;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await updateDoc(existingUserDoc.ref, updates);
     }
     
-    return { ...existingUserProfile, uid: existingUserDoc.id };
+    return { ...existingUserProfile, ...updates, uid: existingUserDoc.id };
   } else {
     // No user with this email, so create a new profile document.
     console.log(`Creating new user profile for ${user.uid} with email ${user.email}`);
-    const role = await getUserRole(user.email);
     const newUserProfile: UserProfile = {
       uid: user.uid,
       email: user.email,

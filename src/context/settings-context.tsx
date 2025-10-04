@@ -8,7 +8,7 @@ import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 import { type LoginSettings, type UserProfile } from '@/lib/db-types';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx"];
+const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx", "admin.com"];
 
 type AuthError = {
   title: string;
@@ -76,9 +76,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // EFFECT 2: Handle authentication state
   useEffect(() => {
-    if (!isFirebaseConfigured || !auth || !loginSettings) {
-      // Wait until firebase and loginSettings are ready
-      if (!isFirebaseConfigured) setIsLoading(false);
+    if (!isFirebaseConfigured || !auth) {
+      setIsLoading(false);
       return;
     }
 
@@ -100,7 +99,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const userRole = await getUserRole(userEmail || '');
         const userDomain = userEmail?.split('@')[1];
 
-        if (!loginSettings.enabled && userRole !== 'Manager') {
+        // This check must happen *after* role is determined
+        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
           await handleSignOutAndSetError({ title: "Login Disabled", message: loginSettings.disabledMessage });
           return;
         }
@@ -115,7 +115,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const userProfile = await findOrCreateUser(firebaseUser);
+        const userProfile = await findOrCreateUser(firebaseUser, userRole);
         
         if (userRole === 'Student' && userProfile && !userProfile.teamId) {
           await assignStudentToTeam(userProfile);
@@ -138,7 +138,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     
     return () => authUnsub();
-  }, [loginSettings]); // Rerun only when loginSettings are loaded/changed
+  }, [isProcessingLogin, loginSettings]); // Correct dependencies
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {

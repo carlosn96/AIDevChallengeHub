@@ -44,15 +44,21 @@ export async function getUserRole(email: string): Promise<UserRole> {
   if (await isAppManager(email)) {
     return 'Manager';
   }
-  
-  // In a real scenario, you might have more complex logic here based on email patterns,
-  // but for this challenge, we will default non-managers to 'Student' or 'Teacher' based on a simple heuristic.
-  // For the purpose of this application, we'll assume any .com address not in the manager list is a student.
-  if (email.endsWith('.com')) {
-     return 'Student';
-  }
 
-  // Fallback for other domains or more complex rules.
-  // For development, we'll default to student.
-  return 'Student';
+  const domain = email.split('@')[1];
+
+  switch (domain) {
+    case 'alumnos.udg.mx':
+      return 'Student';
+    case 'universidad-une.com':
+      return 'Teacher';
+    case 'admin.com':
+      return 'Admin';
+    case 'gmail.com':
+      // Gmail users default to student unless specified otherwise.
+      return 'Student';
+    default:
+      // Fallback for any other domain, can be adjusted as needed.
+      return null;
+  }
 }
