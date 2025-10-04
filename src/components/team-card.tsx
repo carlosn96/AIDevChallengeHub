@@ -3,21 +3,23 @@
 
 import { useState, useMemo } from 'react';
 import type { UserProfile } from '@/lib/db-types';
-import type { Team } from '@/lib/data';
+import type { Team } from '@/lib/db-types';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Pencil, Save, X, Loader2 } from 'lucide-react';
+import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle } from 'lucide-react';
 import { updateTeamName } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
 
 type TeamCardProps = {
   team: Team;
@@ -156,6 +158,25 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
           ))}
         </ul>
       </CardContent>
+      <Separator className="my-4" />
+        <CardFooter>
+            <div className="w-full">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <FileCode className="h-4 w-4 text-primary" />
+                    Assigned Project
+                </h3>
+                {team.projectId ? (
+                    <div className="text-xs bg-muted/50 border border-border/50 rounded-md px-3 py-2 font-mono break-words">
+                        {team.projectId}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4" />
+                        <span>No project assigned yet.</span>
+                    </div>
+                )}
+            </div>
+        </CardFooter>
     </Card>
   );
 }
