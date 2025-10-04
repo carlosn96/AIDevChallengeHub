@@ -5,7 +5,7 @@ import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, sig
 import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
-import { type LoginSettings } from '@/lib/db-types';
+import { type LoginSettings, type UserProfile } from '@/lib/db-types';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx"];
@@ -53,7 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setIsProcessingLogin(false);
   }, [clearUserData]);
 
-  // EFECTO 1: Escuchar cambios en loginSettings (separado)
+  // EFFECT 1: Listen for settings changes
   useEffect(() => {
     if (!isFirebaseConfigured || !db) {
       setAuthError({ 
@@ -72,12 +72,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
 
     return () => settingsUnsub();
-  }, []); // Sin dependencias - solo se ejecuta una vez
+  }, []);
 
-  // EFECTO 2: Manejar autenticación (separado)
+  // EFFECT 2: Handle authentication state
   useEffect(() => {
-    if (!isFirebaseConfigured || !auth) {
-      setIsLoading(false);
+    if (!isFirebaseConfigured || !auth || !loginSettings) {
+      // Wait until firebase and loginSettings are ready
+      if (!isFirebaseConfigured) setIsLoading(false);
       return;
     }
 
@@ -99,50 +100,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const userRole = await getUserRole(userEmail || '');
         const userDomain = userEmail?.split('@')[1];
 
-        // Validación 1: Login deshabilitado
-        if (loginSettings && !loginSettings.enabled && userRole !== 'Manager') {
-          await handleSignOutAndSetError({ 
-            title: "Login Disabled", 
-            message: loginSettings.disabledMessage 
-          });
+        if (!loginSettings.enabled && userRole !== 'Manager') {
+          await handleSignOutAndSetError({ title: "Login Disabled", message: loginSettings.disabledMessage });
           return;
         }
 
-        // Validación 2: Dominio no autorizado
         if (!userEmail || !userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
-          await handleSignOutAndSetError({ 
-            title: "Unauthorized Domain", 
-            message: "Please sign in with an authorized domain account." 
-          });
+          await handleSignOutAndSetError({ title: "Unauthorized Domain", message: "Please sign in with an authorized domain account." });
           return;
         }
 
-        // Validación 3: Sin rol asignado
         if (!userRole) {
-          await handleSignOutAndSetError({ 
-            title: "Access Denied", 
-            message: "Your account role is not authorized for this application." 
-          });
+          await handleSignOutAndSetError({ title: "Access Denied", message: "Your account role is not authorized for this application." });
           return;
         }
 
-        // Usuario válido - crear/actualizar perfil
         const userProfile = await findOrCreateUser(firebaseUser);
+        
+        if (userRole === 'Student' && userProfile && !userProfile.teamId) {
+          await assignStudentToTeam(userProfile);
+        }
+
+        // Now that all background processing is done, set the final state
         setUser(firebaseUser);
         setRole(userRole);
-        
-        // Asignar equipo si es estudiante sin equipo
-        if (userRole === 'Student' && userProfile && !userProfile.teamId) {
-          // No esperamos - se hace en background
-          assignStudentToTeam(userProfile).catch(err => {
-            console.error('Error assigning student to team:', err);
-          });
-        }
+
       } catch (error) {
         console.error('Auth processing error:', error);
-        setAuthError({
+        await handleSignOutAndSetError({
           title: 'Authentication Error',
-          message: 'An unexpected error occurred. Please try again.'
+          message: 'An unexpected error occurred during login. Please try again.'
         });
       } finally {
         setIsLoading(false);
@@ -151,7 +138,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
     
     return () => authUnsub();
-  }, [isProcessingLogin, clearUserData, handleSignOutAndSetError, loginSettings]);
+  }, [loginSettings]); // Rerun only when loginSettings are loaded/changed
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
@@ -189,7 +176,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (!isFirebaseConfigured || !auth) return;
     try {
       await signOut(auth);
-      setAuthError(null);
+      // Let onAuthStateChanged handle the state clearing
     } catch (error: any) {
       console.error("Sign Out Error:", error);
       setAuthError({ 
@@ -202,7 +189,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     role,
-    isLoading: isLoading || isProcessingLogin,
+    isLoading: isLoading || isProcessingLogin || (auth?.currentUser && !role), // More robust loading state
     isSigningIn,
     isFirebaseConfigured,
     authError,

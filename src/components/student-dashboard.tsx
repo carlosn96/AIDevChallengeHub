@@ -13,76 +13,69 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDashboard() {
-  const { user } = useSettings();
+  const { user, isLoading: isAuthLoading } = useSettings();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [myTeam, setMyTeam] = useState<DbTeam | null>(null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [assignedProject, setAssignedProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   // Effect 1: Listen for the user's own profile document
   useEffect(() => {
     if (!user?.uid || !db) {
-      setIsLoading(false);
-      return;
+        if (!isAuthLoading) setIsDataLoading(false);
+        return;
     }
 
-    setIsLoading(true);
     const unsubUser = onSnapshot(doc(db, 'users', user.uid), (doc) => {
       if (doc.exists()) {
-        setUserProfile(doc.data() as UserProfile);
+        const profile = doc.data() as UserProfile;
+        setUserProfile(profile);
       } else {
-        // This case should be handled by the context, but as a fallback:
-        console.warn(`User document for ${user.uid} not found.`);
         setUserProfile(null);
       }
-      // We set loading to false here, the next effect will handle team loading
-      setIsLoading(false);
+      setIsDataLoading(false);
     });
 
     return () => unsubUser();
-  }, [user?.uid]);
+  }, [user?.uid, isAuthLoading]);
 
-  // Effect 2: Listen for team, project, and member data, triggered by changes to teamId
+  // Effect 2: Listen for team, project, and member data, triggered by changes to userProfile
   useEffect(() => {
     const teamId = userProfile?.teamId;
 
     if (!teamId || !db) {
-      // If there's no teamId, clear old team data
       setMyTeam(null);
       setTeamMembers([]);
       setAssignedProject(null);
       return;
     }
 
-    // --- Team Listener ---
     const unsubTeam = onSnapshot(doc(db, 'teams', teamId), async (teamDoc) => {
       if (teamDoc.exists()) {
         const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
         setMyTeam(teamData);
 
-        // --- Fetch Members (dependent on teamData) ---
         if (teamData.memberIds && teamData.memberIds.length > 0) {
-          try {
-            const members = await getTeamMembers(teamData.memberIds);
-            setTeamMembers(members);
-          } catch (error) {
-            console.error("Failed to fetch team members:", error);
-            setTeamMembers([]);
-          }
+            try {
+              const members = await getTeamMembers(teamData.memberIds);
+              setTeamMembers(members);
+            } catch (error) {
+              console.error("Failed to fetch team members:", error);
+              setTeamMembers([]);
+            }
         } else {
-          setTeamMembers([]);
+            setTeamMembers([]);
         }
 
-        // --- Fetch Project (dependent on teamData) ---
         if (teamData.projectId) {
-          const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
-          setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
+            const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
+            setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
         } else {
-          setAssignedProject(null);
+            setAssignedProject(null);
         }
+
       } else {
-        console.warn(`Team document for ID ${teamId} not found.`);
         setMyTeam(null);
       }
     });
@@ -91,8 +84,7 @@ export default function StudentDashboard() {
   }, [userProfile?.teamId]);
 
 
-  // Initial loading state (while user profile is being fetched for the first time)
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
@@ -107,10 +99,10 @@ export default function StudentDashboard() {
           </div>
         </div>
         <div className="grid gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 xl:col-span-3">
             <Skeleton className="h-[400px] w-full rounded-2xl" />
           </div>
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 xl:col-span-9">
             <Skeleton className="h-[600px] w-full rounded-2xl" />
           </div>
         </div>
@@ -118,7 +110,6 @@ export default function StudentDashboard() {
     );
   }
 
-  // "Team Pending" state
   if (userProfile && !myTeam) {
     return (
       <div className="space-y-6">
@@ -140,7 +131,7 @@ export default function StudentDashboard() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 xl:col-span-3">
             <Card className="border-dashed border-2 border-muted-foreground/25">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -157,7 +148,7 @@ export default function StudentDashboard() {
             </Card>
           </div>
 
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 xl:col-span-9">
             <ScheduleDashboard />
           </div>
         </div>
