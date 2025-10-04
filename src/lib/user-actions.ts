@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
 import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings } from './db-types';
-import { type UserRole } from './roles';
+import { type UserRole, getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
 
@@ -39,15 +39,15 @@ export const getUserProfile = async (uid: string): Promise<UserProfile | null> =
  * This prevents duplicate user profiles for the same email address.
  * It also syncs the UID if it has changed (e.g., different auth provider).
  * @param user The Firebase Auth User object.
- * @param role The user's predetermined role.
  * @returns The user's profile.
  */
-export const findOrCreateUser = async (user: User, role: UserRole): Promise<UserProfile | null> => {
+export const findOrCreateUser = async (user: User): Promise<UserProfile | null> => {
   if (!db || !user.email) return null;
 
   const usersRef = collection(db, 'users');
   const q = query(usersRef, where("email", "==", user.email), limit(1));
   const querySnapshot = await getDocs(q);
+  const role = await getUserRole(user.email);
 
   if (!querySnapshot.empty) {
     // User with this email already exists

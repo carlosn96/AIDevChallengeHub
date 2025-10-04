@@ -102,7 +102,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const userProfile = await findOrCreateUser(firebaseUser, userRole);
+        const userProfile = await findOrCreateUser(firebaseUser);
         
         if (userRole === 'Student' && userProfile && !userProfile.teamId) {
           assignStudentToTeam(userProfile).catch(err => {
