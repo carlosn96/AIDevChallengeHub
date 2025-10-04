@@ -21,11 +21,14 @@ import { updateTeamName } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
 
 type TeamCardProps = {
   team: Team;
@@ -173,20 +176,25 @@ export default function TeamCard({ team, members, currentUserId, project }: Team
                     Assigned Project
                 </h3>
                 {project ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="text-sm bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-help">
-                          <p className="font-semibold truncate">{project.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{project.description}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" align="start" className="max-w-xs">
-                        <p className="font-bold">{project.name}</p>
-                        <p>{project.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <div className="text-sm bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
+                                <p className="font-semibold truncate">{project.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{project.description}</p>
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-3">
+                                    <FileCode className="h-5 w-5 text-primary" />
+                                    {project.name}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 text-sm text-muted-foreground">
+                                <p>{project.description}</p>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <HelpCircle className="h-4 w-4" />
