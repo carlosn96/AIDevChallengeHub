@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Users, Calendar, FolderKanban, Loader2 } from 'lucide-react';
 import { type Team, type UserProfile, type Project, type ScheduleEvent } from '@/lib/db-types';
 import TeamManagement from './team-management';
+import ProjectManagement from './project-management';
 
 // Mock components for now - replace with real implementations
 const ScheduleManagement = () => (
@@ -15,17 +16,6 @@ const ScheduleManagement = () => (
         <CardHeader>
             <CardTitle>Schedule Management</CardTitle>
             <CardDescription>CRUD for events will be here.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p>Coming soon...</p>
-        </CardContent>
-    </Card>
-);
-const ProjectManagement = () => (
-    <Card>
-        <CardHeader>
-            <CardTitle>Project Management</CardTitle>
-            <CardDescription>Create projects and assign them to teams.</CardDescription>
         </CardHeader>
         <CardContent>
             <p>Coming soon...</p>
@@ -126,7 +116,7 @@ export default function ManagerDashboard() {
             <ScheduleManagement />
         </TabsContent>
         <TabsContent value="projects" className="mt-6">
-            <ProjectManagement />
+            <ProjectManagement projects={projects} />
         </TabsContent>
       </Tabs>
     </div>

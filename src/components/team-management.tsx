@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -24,11 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { type Team, type UserProfile, type Project } from '@/lib/db-types';
 import { assignProjectToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, FolderKanban } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 type TeamManagementProps = {
   teams: Team[];
@@ -84,22 +82,24 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
               <TableRow key={team.id}>
                 <TableCell className="font-medium">{team.name}</TableCell>
                 <TableCell>
-                  <div className="flex -space-x-2">
-                    {team.memberIds.map((memberId) => {
-                      const member = usersMap.get(memberId);
-                      if (!member) return null;
-                      return (
-                        <Avatar key={memberId} className="border-2 border-background">
-                          <AvatarImage src={member.photoURL || ''} alt={member.displayName || ''} />
-                          <AvatarFallback>
-                            {member.displayName?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      );
-                    })}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {team.memberIds.map(id => usersMap.get(id)?.displayName).join(', ')}
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {team.memberIds.map((memberId) => {
+                        const member = usersMap.get(memberId);
+                        if (!member) return null;
+                        return (
+                          <Avatar key={memberId} className="border-2 border-background h-8 w-8">
+                            <AvatarImage src={member.photoURL || ''} alt={member.displayName || ''} />
+                            <AvatarFallback>
+                              {member.displayName?.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1">
+                      ({team.memberIds.length} members)
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell>
