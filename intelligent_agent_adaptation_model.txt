@@ -1,0 +1,79 @@
+# Structural and Functional Adaptation Model for an Intelligent Agent
+
+## Introduction
+
+This document outlines a model for an intelligent agent designed to automatically adapt to changes in an application's data schemas. The primary goal is to ensure the agent's internal processes for data parsing, validation, and manipulation remain synchronized with the application's evolving data structures, preventing errors and maintaining operational integrity.
+
+The model is based on an analysis of the current data entities defined within this system: `UserProfile`, `Team`, `Project`, `Day`, `ScheduleEvent`, and `LoginSettings`.
+
+## Core Principle: Schema as the Source of Truth
+
+The foundational principle of this model is that the application's TypeScript type definition files (e.g., `src/lib/db-types.ts`) serve as the canonical **source of truth** for all data structures. The agent must treat these definitions as the blueprint for all data it interacts with.
+
+**Current Analyzed Schemas:**
+- **UserProfile**: `{ uid, email, displayName, photoURL, role, teamId, createdAt }`
+- **Team**: `{ id, name, memberIds, projectId, memberCount, createdAt }`
+- **Project**: `{ id, name, description, createdAt }`
+- **Day**: `{ id, title, date, createdAt }`
+- **ScheduleEvent**: `{ id, dayId, title, type, startTime, endTime, description, location }`
+- **LoginSettings**: `{ enabled, disabledMessage }`
+
+Any changes to these structures must trigger an adaptation process within the agent.
+
+## Three-Phase Adaptation Process
+
+The agent's adaptation mechanism is composed of three distinct phases: Detection, Analysis, and Generation.
+
+### Phase 1: Change Detection
+
+The process initiates when a change is detected in the source-of-truth schema files. This can be achieved through:
+
+1.  **File Hashing/Comparison**: Before processing any user request, the agent computes a hash of the relevant schema files (e.g., `src/lib/db-types.ts`). It compares this hash to the one from its previous execution. A mismatch signifies a schema change.
+2.  **Incremental Synchronization**: In a more advanced implementation, the agent receives a "diff" or a list of changed files from its environment, explicitly flagging a schema modification.
+
+**Input**: `previous_schema_state`, `current_schema_state`
+**Output**: `boolean (isChanged)`
+
+### Phase 2: Impact Analysis
+
+Once a change is detected, the agent performs a detailed analysis to understand the nature and scope of the modification.
+
+1.  **Abstract Syntax Tree (AST) Parsing**: The agent parses the TypeScript schema files into Abstract Syntax Trees.
+2.  **Schema Diffing**: It compares the AST of the `previous_schema_state` with the `current_schema_state` to identify specific changes:
+    *   **Field Addition**: e.g., A `priority: 'high' | 'low'` field is added to the `Project` type.
+    *   **Field Removal**: e.g., The `location` field is removed from `ScheduleEvent`.
+    *   **Field Type Modification**: e.g., The `date` field in the `Day` type changes from `Timestamp` to `string`.
+    *   **Entity Addition/Removal**: A new type, like `Task`, is added or removed entirely.
+3.  **Dependency Mapping**: The agent then scans the entire codebase to identify all files and code blocks that reference the modified types. For example, if `Project.name` is changed to `Project.title`, the agent finds every component and function that uses `project.name`.
+
+**Input**: `previous_schema_ast`, `current_schema_ast`
+**Output**: `ImpactReport { modifiedEntities: [...], affectedFiles: [...], changeType: 'ADD' | 'REMOVE' | 'MODIFY' }`
+
+### Phase 3: Adaptive Code Generation
+
+With a clear `ImpactReport`, the agent updates its own internal logic and then generates the necessary code changes for the application.
+
+1.  **Internal Model Update**: The agent first updates its own internal representation of the data models. This affects its subsequent processes:
+    *   **Parsing**: It adjusts its logic for interpreting raw data from Firestore, expecting the new schema.
+    *   **Validation**: Its internal validation rules (e.g., based on Zod schemas) are updated to match the new type definitions.
+    *   **Manipulation**: Functions within the agent that create or modify data objects are updated to work with the new structure.
+2.  **External Code Generation**: The agent uses the `ImpactReport` to generate modifications for all affected files in the user's codebase.
+    *   **Component Props**: If a component's props interface changes, the agent updates the component's code to use the new prop names and types.
+    *   **Function Calls**: It updates function calls that pass the modified data structures as arguments.
+    *   **UI Display**: It modifies JSX/TSX to render the new or changed fields and remove fields that no longer exist.
+    *   **Database Queries/Mutations**: It updates backend action files (e.g., `src/lib/user-actions.ts`) to reflect the new data shapes when writing to or reading from Firestore.
+
+**Input**: `ImpactReport`
+**Output**: A set of file modification instructions (the `<changes>` XML block) to align the codebase with the new schema.
+
+## Example Scenario: Modifying the `Project` Entity
+
+1.  **Change**: A developer adds a `status: 'active' | 'archived'` field to the `Project` type in `src/lib/db-types.ts`.
+2.  **Detection**: The agent's file watcher detects the change in the file.
+3.  **Analysis**: The agent's AST diffing identifies: `Entity: Project, Change: ADD, Field: status`. It then finds that `project-management.tsx` and `team-management.tsx` both reference the `Project` type.
+4.  **Generation**: The agent generates the following changes:
+    *   **`project-management.tsx`**: Adds a `Badge` to display the new status on the project card. Updates the "Create Project" and "Edit Project" forms to include a `Select` input for the `status` field.
+    *   **`user-actions.ts`**: Modifies the `createProject` and `updateProject` functions to handle the new `status` field.
+    *   **`team-management.tsx`**: Potentially filters out 'archived' projects from the assignment Combobox.
+
+This automated, multi-step process ensures that the agent and the application it manages remain robust, consistent, and adaptable to ongoing development.
