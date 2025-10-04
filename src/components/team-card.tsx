@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { UserProfile } from '@/lib/db-types';
 import type { Team } from '@/lib/data';
 import {
@@ -30,6 +30,15 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
   const [teamName, setTeamName] = useState(team.name);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      if (a.uid === currentUserId) return -1;
+      if (b.uid === currentUserId) return 1;
+      return (a.displayName || '').localeCompare(b.displayName || '');
+    });
+  }, [members, currentUserId]);
+
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -122,7 +131,7 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">Team members:</p>
         <ul className="space-y-3">
-          {members.map((member) => (
+          {sortedMembers.map((member) => (
             <li key={member.uid} className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 {member.photoURL && (
