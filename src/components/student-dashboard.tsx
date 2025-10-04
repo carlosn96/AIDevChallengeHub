@@ -39,7 +39,7 @@ export default function StudentDashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (myTeam) {
+    if (myTeam && Array.isArray(myTeam.memberIds)) {
       // In a real app, you would fetch member profiles from Firestore based on myTeam.memberIds.
       // For this example, we continue to filter from static data for avatar URLs etc.
       const members = staticUsers.filter(u => myTeam.memberIds.includes(u.id));
