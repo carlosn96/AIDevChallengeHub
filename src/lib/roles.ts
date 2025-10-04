@@ -18,7 +18,7 @@ export function getUserRole(email: string): UserRole {
   }
 
   const prefix = email.split('@')[0];
-
+  /*
   // Students are identified by specific numeric or alphanumeric patterns
   if (studentPattern.test(prefix)) {
     return 'Student';
@@ -33,9 +33,11 @@ export function getUserRole(email: string): UserRole {
   if (adminPattern.test(prefix) && !prefix.includes('.')) {
     return 'Admin';
   }
-  
+  */
   
 
   // If no pattern matches, return null
-  return null;
+  //return null;
+  // Entorno de desarrollo
+  return 'Student';
 }

@@ -10,7 +10,8 @@ import {
   writeBatch,
   serverTimestamp,
   limit,
-  runTransaction
+  runTransaction,
+  updateDoc
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
 import { type UserProfile, type Team } from './db-types';
@@ -128,4 +129,23 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
   } catch (e) {
     console.error("Transaction failed: ", e);
   }
+};
+
+/**
+ * Updates the name of a team in Firestore.
+ * @param teamId The ID of the team to update.
+ * @param newName The new name for the team.
+ */
+export const updateTeamName = async (teamId: string, newName: string) => {
+  if (!db) {
+    throw new Error("Firestore is not initialized.");
+  }
+  if (!teamId || !newName) {
+    throw new Error("Team ID and new name are required.");
+  }
+
+  const teamRef = doc(db, 'teams', teamId);
+  await updateDoc(teamRef, {
+    name: newName,
+  });
 };
