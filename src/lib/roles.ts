@@ -36,29 +36,40 @@ const isAppManager = async (email: string): Promise<boolean> => {
  * @returns The role of the user, or null if no role matches.
  */
 export async function getUserRole(email: string): Promise<UserRole> {
-  if (!email || !email.includes('@')) {
-    return null;
-  }
-
-  // Highest priority: check if the user is a designated App Manager.
-  if (await isAppManager(email)) {
-    return 'Manager';
-  }
-
-  const domain = email.split('@')[1];
-
-  switch (domain) {
-    case 'alumnos.udg.mx':
-      return 'Student';
-    case 'universidad-une.com':
-      return 'Teacher';
-    case 'admin.com':
-      return 'Admin';
-    case 'gmail.com':
-      // Gmail users default to student unless specified otherwise.
-      return 'Student';
-    default:
-      // Fallback for any other domain, can be adjusted as needed.
+    if (!email || !email.includes('@')) {
       return null;
-  }
+    }
+  
+    // 1. Highest priority: check if the user is a designated App Manager.
+    if (await isAppManager(email)) {
+      return 'Manager';
+    }
+  
+    const [localPart, domain] = email.split('@');
+  
+    // 2. Apply format-based rules for other roles.
+    const isTeacherFormat = /^[a-zA-Z]+\.[a-zA-Z]+$/.test(localPart); // e.g., jhon.doe
+    const isAdminFormat = /^[a-zA-Z][a-zA-Z]+$/.test(localPart); // e.g., jdoe
+    const isStudentFormat = /\d/.test(localPart); // e.g., a12354b, 12354
+  
+    // Apply rules in order of specificity to avoid conflicts
+    if (isTeacherFormat) {
+      return 'Teacher';
+    }
+  
+    if (isAdminFormat) {
+      return 'Admin';
+    }
+  
+    if (isStudentFormat) {
+      return 'Student';
+    }
+    
+    // 3. Fallback for other formats (e.g., simple gmail accounts)
+    if (domain === 'gmail.com') {
+      return 'Student';
+    }
+  
+    // Default to null if no specific role is matched
+    return null;
 }
