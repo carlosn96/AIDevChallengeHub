@@ -4,24 +4,11 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Users, Calendar, FolderKanban, Loader2 } from 'lucide-react';
 import { type Team, type UserProfile, type Project, type ScheduleEvent } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
-
-// Mock components for now - replace with real implementations
-const ScheduleManagement = () => (
-    <Card>
-        <CardHeader>
-            <CardTitle>Schedule Management</CardTitle>
-            <CardDescription>CRUD for events will be here.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <p>Coming soon...</p>
-        </CardContent>
-    </Card>
-);
+import ScheduleManagement from './schedule-management';
 
 
 export default function ManagerDashboard() {
@@ -63,6 +50,7 @@ export default function ManagerDashboard() {
             return {
                 id: doc.id,
                 ...data,
+                // Firestore Timestamps are converted to JS Dates for use in the components
                 startTime: data.startTime.toDate(),
                 endTime: data.endTime.toDate(),
             } as ScheduleEvent
@@ -113,7 +101,7 @@ export default function ManagerDashboard() {
             <TeamManagement teams={teams} users={users} projects={projects} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-6">
-            <ScheduleManagement />
+            <ScheduleManagement schedule={schedule} />
         </TabsContent>
         <TabsContent value="projects" className="mt-6">
             <ProjectManagement projects={projects} />
