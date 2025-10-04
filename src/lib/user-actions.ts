@@ -17,7 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings } from './db-types';
 import { getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -343,4 +343,11 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
   await updateDoc(teamRef, {
     projectId: projectId,
   });
+};
+
+// Settings Actions
+export const updateLoginSettings = async (settings: LoginSettings) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const settingsRef = doc(db, 'settings', 'login');
+  await setDoc(settingsRef, settings, { merge: true });
 };

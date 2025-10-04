@@ -22,6 +22,7 @@ export default function LoginPage() {
     isLoading,
     isFirebaseConfigured,
     authError,
+    loginSettings,
     handleGoogleSignIn,
     isSigningIn,
   } = useSettings();
@@ -52,6 +53,7 @@ export default function LoginPage() {
 
   const displayError = authError?.message;
   const errorTitle = authError?.title;
+  const isLoginDisabled = loginSettings ? !loginSettings.enabled : false;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
@@ -104,6 +106,12 @@ export default function LoginPage() {
                   <AlertTitle>Configuration Error</AlertTitle>
                   <AlertDescription>{ authError?.message || 'Authentication is currently unavailable.'}</AlertDescription>
                 </Alert>
+              ) : isLoginDisabled ? (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Login Disabled</AlertTitle>
+                  <AlertDescription>{loginSettings?.disabledMessage}</AlertDescription>
+                </Alert>
               ) : displayError ? (
                 <Alert variant="destructive" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
@@ -115,7 +123,7 @@ export default function LoginPage() {
 
               <Button
                 onClick={handleGoogleSignIn}
-                disabled={isSigningIn || isLoading || !isFirebaseConfigured}
+                disabled={isSigningIn || isLoading || !isFirebaseConfigured || isLoginDisabled}
                 size="lg"
                 className="w-full button-primary rounded-xl py-4 h-auto px-6 flex items-center justify-center gap-3 text-white font-semibold inter uppercase tracking-wide"
               >

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2 } from 'lucide-react';
-import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day } from '@/lib/db-types';
+import { Users, Calendar, FolderKanban, Loader2, Settings } from 'lucide-react';
+import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
 import ScheduleManagement from './schedule-management';
+import SettingsManagement from './settings-management';
 
 
 export default function ManagerDashboard() {
@@ -17,6 +18,7 @@ export default function ManagerDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
   const [days, setDays] = useState<Day[]>([]);
+  const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function ManagerDashboard() {
         projects: collection(db, 'projects'),
         schedule: collection(db, 'schedule'),
         days: collection(db, 'days'),
+        loginSettings: doc(db, 'settings', 'login'),
     };
 
     unsubscribes.push(onSnapshot(query(collections.teams, orderBy('createdAt', 'desc')), (snapshot) => {
@@ -52,6 +55,15 @@ export default function ManagerDashboard() {
     
     unsubscribes.push(onSnapshot(query(collections.days, orderBy('date', 'asc')), (snapshot) => {
         setDays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Day)));
+    }));
+
+    unsubscribes.push(onSnapshot(collections.loginSettings, (snapshot) => {
+        if (snapshot.exists()) {
+            setLoginSettings(snapshot.data() as LoginSettings);
+        } else {
+            // Initialize with default settings if it doesn't exist
+            setLoginSettings({ enabled: true, disabledMessage: 'Login is currently disabled by an administrator.' });
+        }
         setIsLoading(false);
     }));
 
@@ -80,7 +92,7 @@ export default function ManagerDashboard() {
       </div>
 
       <Tabs defaultValue="teams" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12">
+        <TabsList className="grid w-full grid-cols-4 h-12">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2" />
             Team Management
@@ -93,6 +105,10 @@ export default function ManagerDashboard() {
             <FolderKanban className="mr-2" />
             Projects
           </TabsTrigger>
+          <TabsTrigger value="settings" className="h-full">
+            <Settings className="mr-2" />
+            Settings
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="teams" className="mt-6">
             <TeamManagement teams={teams} users={users} projects={projects} />
@@ -102,6 +118,9 @@ export default function ManagerDashboard() {
         </TabsContent>
         <TabsContent value="projects" className="mt-6">
             <ProjectManagement projects={projects} />
+        </TabsContent>
+        <TabsContent value="settings" className="mt-6">
+            <SettingsManagement settings={loginSettings} />
         </TabsContent>
       </Tabs>
     </div>

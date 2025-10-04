@@ -5,6 +5,8 @@ import { type User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, sig
 import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/lib/firebase';
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
+import { type LoginSettings } from '@/lib/db-types';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com"]; // dev and primary domains
 
@@ -20,6 +22,7 @@ type SettingsContextType = {
   isSigningIn: boolean;
   isFirebaseConfigured: boolean;
   authError: AuthError | null;
+  loginSettings: LoginSettings | null;
   handleGoogleSignIn: () => Promise<void>;
   handleSignOut: () => Promise<void>;
 };
@@ -32,6 +35,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<AuthError | null>(null);
+  const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
 
   const clearUserData = useCallback(() => {
     setUser(null);
@@ -39,7 +43,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isFirebaseConfigured || !db) {
       setAuthError({ 
         title: 'Configuration Error', 
         message: firebaseInitializationError || 'Authentication is currently unavailable.' 
@@ -47,9 +51,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
+    
+    // Subscribe to login settings
+    const settingsUnsub = onSnapshot(doc(db, 'settings', 'login'), (doc) => {
+        if (doc.exists()) {
+            setLoginSettings(doc.data() as LoginSettings);
+        } else {
+            // Default to enabled if not set
+            setLoginSettings({ enabled: true, disabledMessage: 'Login is temporarily disabled.' });
+        }
+    });
 
     if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const userEmail = firebaseUser.email;
           const userDomain = userEmail?.split('@')[1];
@@ -94,15 +108,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(false);
       });
-      return () => unsubscribe();
+      return () => {
+          authUnsub();
+          settingsUnsub();
+      };
     } else {
       setIsLoading(false);
+       return () => {
+          settingsUnsub();
+      };
     }
   }, [clearUserData]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
         setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
+        return;
+    }
+
+    if (!loginSettings?.enabled) {
+        setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
         return;
     }
 
@@ -159,6 +184,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     isSigningIn,
     isFirebaseConfigured,
     authError,
+    loginSettings,
     handleGoogleSignIn,
     handleSignOut,
   };

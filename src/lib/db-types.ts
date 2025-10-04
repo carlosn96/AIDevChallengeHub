@@ -43,3 +43,8 @@ export type ScheduleEvent = {
   description: string;
   location: string;
 };
+
+export type LoginSettings = {
+  enabled: boolean;
+  disabledMessage: string;
+};
