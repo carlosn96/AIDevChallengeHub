@@ -1,4 +1,3 @@
-
 import { db } from '@/lib/firebase';
 import { 
   doc,
@@ -69,12 +68,13 @@ export const findOrCreateUser = async (user: User): Promise<UserProfile | null> 
   } else {
     // No user with this email, so create a new profile document.
     console.log(`Creating new user profile for ${user.uid} with email ${user.email}`);
+    const role = await getUserRole(user.email);
     const newUserProfile: UserProfile = {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
       photoURL: user.photoURL,
-      role: getUserRole(user.email),
+      role: role,
       createdAt: serverTimestamp() as any,
     };
     
@@ -109,8 +109,12 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         const currentTeamRef = doc(db, 'teams', userProfileInTransaction.teamId);
         const teamDocInTransaction = await transaction.get(currentTeamRef);
         if (teamDocInTransaction.exists()) {
-          console.log(`User ${userProfile.uid} is already in a valid team: ${userProfileInTransaction.teamId}. No action needed.`);
-          return; // Exit if user already has a valid team.
+           const teamData = teamDocInTransaction.data();
+           const memberIds = teamData.memberIds || [];
+           if (memberIds.includes(userProfile.uid)) {
+              console.log(`User ${userProfile.uid} is already a member of a valid team: ${userProfileInTransaction.teamId}. No action needed.`);
+              return;
+           }
         }
       }
 
@@ -123,47 +127,61 @@ export const assignStudentToTeam = async (userProfile: UserProfile) => {
         limit(1)
       );
       
-      // Execute the query within the transaction context.
+      // Execute the query to find an open team. Note: getDocs is not a transactional read.
+      // We will re-check the team's status inside the transaction.
       const querySnapshot = await getDocs(q);
 
       let teamId: string;
       let teamRef;
 
       if (!querySnapshot.empty) {
-        // Found a team with an open spot
-        const teamDoc = querySnapshot.docs[0];
-        teamRef = teamDoc.ref;
-        teamId = teamDoc.id;
-        console.log(`Found open team: ${teamId}`);
+        // Found a potential team. We must now read it transactionally.
+        const potentialTeamDoc = querySnapshot.docs[0];
+        teamRef = potentialTeamDoc.ref;
+        const teamDocInTransaction = await transaction.get(teamRef);
 
-        const currentMemberIds = teamDoc.data().memberIds || [];
-        // Use a Set to prevent duplicates
-        const newMemberIds = Array.from(new Set([...currentMemberIds, userProfile.uid]));
-        
-        transaction.update(teamRef, {
-          memberIds: newMemberIds,
-          memberCount: newMemberIds.length,
-        });
+        if (teamDocInTransaction.exists()) {
+            const teamData = teamDocInTransaction.data();
+            const currentMemberIds = teamData.memberIds || [];
+            
+            // Re-verify count and membership inside the transaction
+            if (currentMemberIds.length < MAX_TEAM_MEMBERS && !currentMemberIds.includes(userProfile.uid)) {
+              teamId = teamDocInTransaction.id;
+              console.log(`Found open team inside transaction: ${teamId}`);
+              
+              const newMemberIds = [...currentMemberIds, userProfile.uid];
+              
+              transaction.update(teamRef, {
+                memberIds: newMemberIds,
+                memberCount: newMemberIds.length,
+              });
 
-      } else {
-        // No open teams found, create a new one
-        console.log("No open teams found, creating a new one.");
-        const newTeamRef = doc(collection(db, 'teams'));
-        teamId = newTeamRef.id;
-        teamRef = newTeamRef;
-
-        const newTeamData: Omit<Team, 'id'> = {
-          name: `Team ${teamId.substring(0, 6)}`,
-          memberIds: [userProfile.uid],
-          memberCount: 1,
-          createdAt: serverTimestamp() as any,
-        };
-        transaction.set(teamRef, newTeamData);
+              // Update the user's profile with the new teamId
+              transaction.update(userRef, { teamId });
+              console.log(`User ${userProfile.uid} successfully assigned to team ${teamId}.`);
+              return; // Exit after successful assignment
+            }
+        }
       }
+      
+      // If we reach here, it means either no open teams were found, or the one we found was filled.
+      // So, we create a new team.
+      console.log("No open teams found or candidate team was filled. Creating a new one.");
+      const newTeamRef = doc(collection(db, 'teams'));
+      teamId = newTeamRef.id;
+      teamRef = newTeamRef;
+
+      const newTeamData: Omit<Team, 'id'> = {
+        name: `Team ${teamId.substring(0, 6)}`,
+        memberIds: [userProfile.uid],
+        memberCount: 1,
+        createdAt: serverTimestamp() as any,
+      };
+      transaction.set(teamRef, newTeamData);
       
       // Finally, update the user's profile with the new teamId
       transaction.update(userRef, { teamId });
-      console.log(`User ${userProfile.uid} successfully assigned to team ${teamId}.`);
+      console.log(`User ${userProfile.uid} successfully assigned to new team ${teamId}.`);
     });
   } catch (e) {
     console.error("Team assignment transaction failed: ", e);

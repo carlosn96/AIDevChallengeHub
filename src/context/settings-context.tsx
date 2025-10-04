@@ -56,7 +56,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
           if (userEmail && userDomain && ALLOWED_DOMAINS.includes(userDomain)) {
             
-            const userRole = getUserRole(userEmail);
+            const userRole = await getUserRole(userEmail);
             
             if (userRole === 'Student') {
               const userProfile = await findOrCreateUser(firebaseUser);
@@ -69,7 +69,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               }
             } else if (userRole === 'Teacher' || userRole === 'Admin') {
                 // For teachers and admins, we grant access without creating a DB record.
-                // Their experience is managed by the role determined from their email.
+                // Their experience is managed by the role determined from their email or the permissions doc.
                 setUser(firebaseUser);
                 setRole(userRole);
             } else {
