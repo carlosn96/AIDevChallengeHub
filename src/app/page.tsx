@@ -2,17 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Rocket, Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
+import { Sparkles, Bot, Trophy, AlertCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSettings } from '@/context/settings-context';
 
 
 const Logo = () => (
-  <div className="inline-block p-4 rounded-full card-glass mb-6">
-    <Rocket className="w-16 h-16 text-accent" />
-  </div>
-);
+    <div className="inline-block p-4 rounded-full card-glass mb-6">
+      <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-accent">
+          <path d="M50 20L20 80H80L50 20Z" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M35 60H65" stroke="currentColor" strokeWidth="10" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
 
 export default function LoginPage() {
   const {
