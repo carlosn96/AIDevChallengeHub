@@ -136,7 +136,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         settingsUnsub();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loginSettings, handleSignOutAndSetError]);
+  }, [loginSettings]);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {

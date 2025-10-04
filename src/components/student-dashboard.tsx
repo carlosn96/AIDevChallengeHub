@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,7 +7,7 @@ import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
 import { type UserProfile, type Team as DbTeam, type Project } from '@/lib/db-types';
-import { getTeamMembers, assignStudentToTeam } from '@/lib/user-actions';
+import { getTeamMembers } from '@/lib/user-actions';
 import { Loader2, Users, Calendar, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,88 +19,59 @@ export default function StudentDashboard() {
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [assignedProject, setAssignedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAssigningTeam, setIsAssigningTeam] = useState(false);
 
+  // This effect now ONLY fetches and listens to data.
+  // It no longer tries to perform any write/assignment operations.
   useEffect(() => {
     if (!user || !db) {
       setIsLoading(false);
       return;
     }
-
-    // Reset states on user change
+    
     setIsLoading(true);
-    setIsAssigningTeam(false);
-    setUserProfile(null);
-    setMyTeam(null);
-    setTeamMembers([]);
-    setAssignedProject(null);
 
-    const unsubUser = onSnapshot(
-      doc(db, 'users', user.uid),
-      async (userDoc) => {
-        if (userDoc.exists()) {
-          const profile = userDoc.data() as UserProfile;
-          setUserProfile(profile);
+    const unsubUser = onSnapshot(doc(db, 'users', user.uid), (userDoc) => {
+      if (userDoc.exists()) {
+        const profile = userDoc.data() as UserProfile;
+        setUserProfile(profile);
 
-          if (profile.teamId) {
-            setIsAssigningTeam(false); // Stop assignment loading state if teamId appears
-            const unsubTeam = onSnapshot(
-              doc(db, 'teams', profile.teamId),
-              async (teamDoc) => {
-                if (teamDoc.exists()) {
-                  const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
-                  setMyTeam(teamData);
+        if (profile.teamId) {
+          // If user has a team, set up a listener for that team
+          const unsubTeam = onSnapshot(doc(db, 'teams', profile.teamId), async (teamDoc) => {
+            if (teamDoc.exists()) {
+              const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
+              setMyTeam(teamData);
 
-                  if (teamData.projectId) {
-                    const projectRef = doc(db, 'projects', teamData.projectId);
-                    const projectSnap = await getDoc(projectRef);
-                    if (projectSnap.exists()) {
-                      setAssignedProject({ id: projectSnap.id, ...projectSnap.data() } as Project);
-                    } else {
-                      setAssignedProject(null);
-                    }
-                  } else {
-                    setAssignedProject(null);
-                  }
-                } else {
-                  console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
-                  setMyTeam(null);
-                  if (profile.role === 'Student') {
-                    setIsAssigningTeam(true);
-                    await assignStudentToTeam(profile);
-                  }
-                }
-                setIsLoading(false);
-              },
-              (error) => {
-                console.error('Error fetching team:', error);
-                setIsLoading(false);
+              // Fetch assigned project if it exists
+              if (teamData.projectId) {
+                const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
+                setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
+              } else {
+                setAssignedProject(null);
               }
-            );
-            return () => unsubTeam();
-          } else {
-            if (profile.role === 'Student' && !isAssigningTeam) {
-              console.log(`User ${profile.uid} has no team. Assigning...`);
-              setIsAssigningTeam(true);
-              await assignStudentToTeam(profile); // This is async, the snapshot listener will catch the change
             } else {
-              setIsLoading(false); // Stop initial loading, but assignment might be in progress
+              setMyTeam(null);
             }
-          }
+            setIsLoading(false);
+          });
+          return () => unsubTeam();
         } else {
-          console.warn(`User document for ${user.uid} not found.`);
-          setIsLoading(false);
+          // User has no teamId, they are likely being assigned one.
+          // We just show a loading or pending state.
+          setMyTeam(null);
+          setIsLoading(false); // Stop loading to show "Team Pending" card
         }
-      },
-      (error) => {
-        console.error('Error fetching user profile:', error);
+      } else {
+        // User doc doesn't exist, which shouldn't happen if they are logged in
         setIsLoading(false);
+        console.warn(`User document for ${user.uid} not found.`);
       }
-    );
+    });
 
     return () => unsubUser();
   }, [user]);
 
+  // This effect fetches team members whenever the team changes.
   useEffect(() => {
     const fetchTeamMembers = async () => {
       if (myTeam && Array.isArray(myTeam.memberIds) && myTeam.memberIds.length > 0) {
@@ -117,23 +87,21 @@ export default function StudentDashboard() {
       }
     };
 
-    if (myTeam) {
-      fetchTeamMembers();
-    }
+    fetchTeamMembers();
   }, [myTeam]);
 
-  // Combined loading state
-  if (isLoading || (isAssigningTeam && !myTeam)) {
+  // Initial loading state (while user profile is being fetched for the first time)
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
           <div>
             <h1 className="text-xl font-bold">
-              {isAssigningTeam ? 'Finding you a team...' : 'Loading your dashboard...'}
+              Loading your dashboard...
             </h1>
             <p className="text-muted-foreground text-sm">
-                {isAssigningTeam ? 'This should only take a moment.' : 'Please wait while we get everything ready.'}
+                Please wait while we get everything ready.
             </p>
           </div>
         </div>
@@ -149,7 +117,7 @@ export default function StudentDashboard() {
     );
   }
 
-  // No team assigned state
+  // "Team Pending" state
   if (userProfile && !myTeam) {
     return (
       <div className="space-y-6">
@@ -179,11 +147,11 @@ export default function StudentDashboard() {
                 </div>
                 <CardTitle className="text-xl">Team Pending</CardTitle>
                 <CardDescription>
-                  You haven’t been assigned to a team yet. The organizers will assign you soon.
+                  You are being assigned to a team. This should only take a moment.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-center text-sm text-muted-foreground">
-                <p>In the meantime, check out the event schedule →</p>
+              <CardContent className="text-center">
+                 <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
               </CardContent>
             </Card>
           </div>
