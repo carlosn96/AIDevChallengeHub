@@ -17,16 +17,16 @@ import { useSettings } from "@/context/settings-context";
 import { Badge } from "@/components/ui/badge";
 
 const Logo = () => (
-  <Link href="/dashboard" className="flex items-center gap-3 group">
-    <div className="relative p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20">
-      <Rocket className="h-6 w-6 text-primary transition-transform duration-300 group-hover:rotate-12" />
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
+  <Link href="/dashboard" className="flex items-center gap-2.5 group">
+    <div className="relative p-1.5 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20">
+      <Rocket className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12" />
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
     </div>
-    <div className="flex flex-col">
-      <span className="font-bold text-base sm:text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+    <div className="flex flex-col -space-y-0.5">
+      <span className="font-bold text-sm sm:text-base bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
         AIDevChallenge
       </span>
-      <span className="text-[10px] sm:text-xs text-muted-foreground font-medium -mt-1">
+      <span className="text-[9px] sm:text-[10px] text-muted-foreground font-medium">
         Hub 2025
       </span>
     </div>
@@ -41,13 +41,23 @@ export default function Header() {
   };
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return <User className="h-5 w-5" />;
+    if (!name) return <User className="h-4 w-4" />;
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const getRoleColor = (role: string) => {
+    const colors = {
+      'Teacher': 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+      'Student': 'bg-green-500/10 text-green-500 border-green-500/30',
+      'Admin': 'bg-purple-500/10 text-purple-500 border-purple-500/30',
+    };
+    return colors[role as keyof typeof colors] || 'bg-primary/10 text-primary border-primary/30';
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between">
           {/* Logo Section */}
           <div className="flex-shrink-0">
             <Logo />
@@ -55,18 +65,25 @@ export default function Header() {
 
           {/* User Section */}
           {user && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* User Info - Hidden on mobile */}
-              <div className="hidden sm:flex flex-col items-end mr-2">
-                <p className="text-sm font-medium leading-tight text-foreground">
-                  {user.displayName}
-                </p>
+              <div className="hidden md:flex flex-col items-end">
                 <div className="flex items-center gap-2">
-                  {role && <Badge variant="outline" className="text-xs">{role}</Badge>}
-                  <p className="text-xs leading-tight text-muted-foreground">
-                    {user.email}
+                  {role && (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[10px] px-2 py-0.5 h-5 font-medium ${getRoleColor(role)}`}
+                    >
+                      {role}
+                    </Badge>
+                  )}
+                  <p className="text-sm font-semibold leading-none text-foreground">
+                    {user.displayName}
                   </p>
                 </div>
+                <p className="text-[11px] leading-tight text-muted-foreground mt-1">
+                  {user.email}
+                </p>
               </div>
 
               {/* Avatar Dropdown */}
@@ -74,16 +91,16 @@ export default function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/50 transition-all"
+                    className="relative h-9 w-9 rounded-full p-0 hover:ring-2 hover:ring-primary/40 transition-all"
                   >
-                    <Avatar className="h-10 w-10 border-2 border-primary/20 hover:border-primary transition-all">
+                    <Avatar className="h-9 w-9 border-2 border-primary/20 hover:border-primary/50 transition-all">
                       {user.photoURL && (
                         <AvatarImage 
                           src={user.photoURL} 
                           alt={user.displayName || 'User'} 
                         />
                       )}
-                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-sm">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-xs">
                         {getInitials(user.displayName)}
                       </AvatarFallback>
                     </Avatar>
@@ -91,14 +108,36 @@ export default function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1.5 p-2">
-                       <p className="text-sm font-semibold leading-none">
-                        {user.displayName}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground mb-1">
-                        {user.email}
-                      </p>
-                      {role && <Badge variant="secondary" className="w-fit">{role}</Badge>}
+                    <div className="flex flex-col space-y-2 p-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-10 w-10 border-2 border-primary/20">
+                          {user.photoURL && (
+                            <AvatarImage 
+                              src={user.photoURL} 
+                              alt={user.displayName || 'User'} 
+                            />
+                          )}
+                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-xs">
+                            {getInitials(user.displayName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-none truncate">
+                            {user.displayName}
+                          </p>
+                          <p className="text-xs leading-none text-muted-foreground mt-1 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                      {role && (
+                        <Badge 
+                          variant="secondary" 
+                          className={`w-fit ${getRoleColor(role)}`}
+                        >
+                          {role}
+                        </Badge>
+                      )}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -129,6 +168,7 @@ export default function Header() {
               </DropdownMenu>
             </div>
           )}
+        </div>
       </div>
     </header>
   );
