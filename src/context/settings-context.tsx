@@ -121,22 +121,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           settingsUnsub();
       };
     }
-  }, [clearUserData, loginSettings]);
+  // The dependency array is intentionally sparse to only run this effect once on mount
+  // and not re-run on loginSettings change, as onAuthStateChanged handles the logic internally.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGoogleSignIn = async () => {
     if (!isFirebaseConfigured || !auth) {
         setAuthError({ title: 'Service Unavailable', message: 'The authentication service is currently unavailable. Please try again later.' });
         return;
-    }
-    
-    // Immediate feedback for non-managers if they try to sign in when it is disabled.
-    // The authoritative check remains in onAuthStateChanged
-    if (loginSettings && !loginSettings.enabled) {
-        const tempRole = user ? role : null;
-        if (tempRole && tempRole !== 'Manager') {
-            setAuthError({ title: "Login Disabled", message: loginSettings.disabledMessage });
-            return;
-        }
     }
 
     const provider = new GoogleAuthProvider();
@@ -147,7 +140,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     try {
         await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle the rest of the logic
+        // onAuthStateChanged will handle the rest of the logic, including role checks and disabled states.
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
             console.log("Sign-in popup was not completed.");
