@@ -6,8 +6,7 @@ import { auth, db, isFirebaseConfigured, firebaseInitializationError } from '@/l
 import { getUserRole, type UserRole } from '@/lib/roles';
 import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 
-//const ALLOWED_DOMAIN = "universidad-une.com"; // primary domain
-const ALLOWED_DOMAIN = "gmail.com"; // dev domain
+const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com"]; // dev and primary domains
 
 type AuthError = {
   title: string;
@@ -53,7 +52,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           const userEmail = firebaseUser.email;
-          if (userEmail && userEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
+          const userDomain = userEmail?.split('@')[1];
+
+          if (userEmail && userDomain && ALLOWED_DOMAINS.includes(userDomain)) {
             
             const userRole = getUserRole(userEmail);
             
@@ -85,7 +86,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             await signOut(auth);
             setAuthError({
                 title: "Unauthorized Domain",
-                message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
+                message: `Please sign in with an authorized domain account.`
             });
             clearUserData();
           }
@@ -109,22 +110,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
       prompt: 'select_account',
-      hd: ALLOWED_DOMAIN,
     });
 
     setIsSigningIn(true);
     setAuthError(null);
 
     try {
-        await signInWithPopup(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+        const userEmail = result.user.email;
+        const userDomain = userEmail?.split('@')[1];
+
+        if (!userDomain || !ALLOWED_DOMAINS.includes(userDomain)) {
+          await signOut(auth);
+          setAuthError({
+            title: "Unauthorized Domain",
+            message: `Please sign in with an authorized domain account.`
+          });
+        }
+
     } catch (error: any) {
         if (error.code === 'auth/popup-closed-by-user') {
             console.log("Sign-in popup closed by user.");
-        } else if (error.code === 'auth/unauthorized-domain' || (error.customData?._tokenResponse?.oauthIdToken && !JSON.parse(atob(error.customData._tokenResponse.oauthIdToken.split('.')[1])).hd === ALLOWED_DOMAIN)) {
-             setAuthError({
-                title: "Unauthorized Domain",
-                message: `Please sign in with an @${ALLOWED_DOMAIN} account.`
-            });
         } else if (error.code === 'auth/cancelled-popup-request') {
              console.log("Sign-in popup request cancelled.");
         } else {
