@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { Team, User } from '@/lib/data';
+import type { UserProfile } from '@/lib/db-types';
+import type { Team } from '@/lib/data';
 import {
   Card,
   CardContent,
@@ -20,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type TeamCardProps = {
   team: Team;
-  members: User[];
+  members: UserProfile[];
   currentUserId: string;
 };
 
@@ -122,21 +123,21 @@ export default function TeamCard({ team, members, currentUserId }: TeamCardProps
         <p className="text-sm text-muted-foreground">Team members:</p>
         <ul className="space-y-3">
           {members.map((member) => (
-            <li key={member.id} className="flex items-center gap-3">
+            <li key={member.uid} className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                {member.avatarUrl && (
-                  <AvatarImage src={member.avatarUrl} alt={member.name} />
+                {member.photoURL && (
+                  <AvatarImage src={member.photoURL} alt={member.displayName || 'member'} />
                 )}
                 <AvatarFallback>
-                  {member.name
-                    .split(' ')
+                  {member.displayName
+                    ?.split(' ')
                     .map((n) => n[0])
                     .join('')}
                 </AvatarFallback>
               </Avatar>
               <div className='flex items-center'>
-                <span className="font-medium">{member.name}</span>
-                {member.id === currentUserId && (
+                <span className="font-medium">{member.displayName}</span>
+                {member.uid === currentUserId && (
                     <Badge variant="outline" className="ml-2">
                     You
                     </Badge>

@@ -7,7 +7,7 @@ import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
 import { type UserProfile, type Team as DbTeam } from '@/lib/db-types';
-import { type User as StaticUser, users as staticUsers } from '@/lib/data';
+import { getTeamMembers } from '@/lib/user-actions';
 import { Loader2, Users, Calendar, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +16,7 @@ export default function StudentDashboard() {
   const { user } = useSettings();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [myTeam, setMyTeam] = useState<DbTeam | null>(null);
-  const [teamMembers, setTeamMembers] = useState<StaticUser[]>([]);
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +38,8 @@ export default function StudentDashboard() {
                 if (teamDoc.exists()) {
                   setMyTeam({ id: teamDoc.id, ...teamDoc.data() } as DbTeam);
                 }
+                // We set loading to false here, after team data has been initially processed.
+                // The team members will be fetched in the next effect.
                 setIsLoading(false);
               }
             );
@@ -59,10 +61,16 @@ export default function StudentDashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (myTeam && Array.isArray(myTeam.memberIds)) {
-      const members = staticUsers.filter(u => myTeam.memberIds.includes(u.id));
-      setTeamMembers(members);
-    }
+    const fetchTeamMembers = async () => {
+      if (myTeam && Array.isArray(myTeam.memberIds) && myTeam.memberIds.length > 0) {
+        const members = await getTeamMembers(myTeam.memberIds);
+        setTeamMembers(members);
+      } else {
+        setTeamMembers([]);
+      }
+    };
+
+    fetchTeamMembers();
   }, [myTeam]);
 
   // Loading state

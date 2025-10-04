@@ -149,3 +149,26 @@ export const updateTeamName = async (teamId: string, newName: string) => {
     name: newName,
   });
 };
+
+/**
+ * Retrieves the profiles of all members of a team.
+ * @param memberIds An array of user IDs.
+ * @returns A promise that resolves to an array of UserProfile objects.
+ */
+export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]> => {
+  if (!db || memberIds.length === 0) {
+    return [];
+  }
+
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('uid', 'in', memberIds));
+  
+  try {
+    const querySnapshot = await getDocs(q);
+    const members = querySnapshot.docs.map(doc => doc.data() as UserProfile);
+    return members;
+  } catch (error) {
+    console.error("Error fetching team members: ", error);
+    return [];
+  }
+};
