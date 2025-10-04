@@ -24,46 +24,46 @@ export default function StudentDashboard() {
       setIsLoading(false);
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     const unsubUser = onSnapshot(
       doc(db, 'users', user.uid),
       async (userDoc) => {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
-
+  
           if (profile.teamId) {
             const unsubTeam = onSnapshot(
               doc(db, 'teams', profile.teamId),
               async (teamDoc) => {
                 if (teamDoc.exists()) {
                   setMyTeam({ id: teamDoc.id, ...teamDoc.data() } as DbTeam);
-                  setIsLoading(false);
                 } else {
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
-                  // The team doesn't exist, so we stop loading and trigger reassignment.
-                  // The UI will show the "no team" state temporarily.
-                  // The user snapshot will re-trigger when the profile is updated.
-                  setIsLoading(false); 
+                  setMyTeam(null);
                   await assignStudentToTeam(profile);
                 }
+                setIsLoading(false);
               },
               (error) => {
                 console.error('Error fetching team:', error);
-                setIsLoading(false); // Stop loading on team fetch error
+                setIsLoading(false);
               }
             );
             return () => unsubTeam();
           } else {
-            // User has a profile but no teamId. Stop loading.
+            // User has a profile but no teamId, trigger assignment
+            setMyTeam(null);
+            if (profile.role === 'Student') {
+              console.log(`User ${profile.uid} has no team. Assigning...`);
+              await assignStudentToTeam(profile);
+            }
             setIsLoading(false);
-            // Optionally, we could trigger assignment here as well, 
-            // but the settings context already attempts this.
           }
         } else {
-          // User document doesn't exist. Stop loading.
+          // User document doesn't exist.
           setIsLoading(false);
         }
       },
@@ -72,7 +72,7 @@ export default function StudentDashboard() {
         setIsLoading(false);
       }
     );
-
+  
     return () => unsubUser();
   }, [user]);
 
