@@ -202,7 +202,7 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Combobox
                       options={projectOptions}
                       value={team.projectId || 'none'}
