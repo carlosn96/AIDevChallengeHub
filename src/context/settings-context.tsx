@@ -54,13 +54,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const userEmail = firebaseUser.email;
           if (userEmail && userEmail.endsWith(`@${ALLOWED_DOMAIN}`)) {
             
-            const userProfile = await findOrCreateUser(firebaseUser);
-            setUser(firebaseUser);
-            setRole(userProfile?.role || null); // Use role from DB profile
+            const userRole = getUserRole(userEmail);
+            
+            if (userRole === 'Student') {
+              const userProfile = await findOrCreateUser(firebaseUser);
+              setUser(firebaseUser);
+              setRole('Student');
 
-            // If user is a student and has no team, try to assign one.
-            if (userProfile && userProfile.role === 'Student' && !userProfile.teamId) {
-                await assignStudentToTeam(userProfile);
+              // If user is a student and has no team, try to assign one.
+              if (userProfile && !userProfile.teamId) {
+                  await assignStudentToTeam(userProfile);
+              }
+            } else if (userRole === 'Teacher' || userRole === 'Admin') {
+                // For teachers and admins, we grant access without creating a DB record.
+                // Their experience is managed by the role determined from their email.
+                setUser(firebaseUser);
+                setRole(userRole);
+            } else {
+              // Not a student, teacher, or admin, or role is null
+              await signOut(auth);
+              setAuthError({
+                title: "Access Denied",
+                message: "Your account role could not be determined or is not authorized."
+              });
+              clearUserData();
             }
 
           } else {
