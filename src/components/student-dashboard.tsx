@@ -43,9 +43,11 @@ export default function StudentDashboard() {
                   setIsLoading(false);
                 } else {
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
+                  // The team doesn't exist, so we stop loading and trigger reassignment.
+                  // The UI will show the "no team" state temporarily.
+                  // The user snapshot will re-trigger when the profile is updated.
+                  setIsLoading(false); 
                   await assignStudentToTeam(profile);
-                  // The profile update will trigger the user snapshot again.
-                  // We keep loading until then.
                 }
               },
               (error) => {
@@ -55,11 +57,13 @@ export default function StudentDashboard() {
             );
             return () => unsubTeam();
           } else {
-            // User has a profile but no teamId.
+            // User has a profile but no teamId. Stop loading.
             setIsLoading(false);
+            // Optionally, we could trigger assignment here as well, 
+            // but the settings context already attempts this.
           }
         } else {
-          // User document doesn't exist.
+          // User document doesn't exist. Stop loading.
           setIsLoading(false);
         }
       },
