@@ -20,7 +20,10 @@ export default function StudentDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !db) return;
+    if (!user || !db) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
 
@@ -39,26 +42,24 @@ export default function StudentDashboard() {
                   setMyTeam({ id: teamDoc.id, ...teamDoc.data() } as DbTeam);
                   setIsLoading(false);
                 } else {
-                  // The user has a teamId, but the team document doesn't exist.
-                  // This is a data inconsistency. We should re-assign the user.
                   console.warn(`User ${profile.uid} has an invalid teamId: ${profile.teamId}. Re-assigning...`);
                   await assignStudentToTeam(profile);
-                  // The user's profile will be updated by the action, which will
-                  // trigger the onSnapshot listener for the user again, restarting this process
-                  // with the new teamId. We keep loading until then.
+                  // The profile update will trigger the user snapshot again.
+                  // We keep loading until then.
                 }
+              },
+              (error) => {
+                console.error('Error fetching team:', error);
+                setIsLoading(false); // Stop loading on team fetch error
               }
             );
             return () => unsubTeam();
           } else {
-            // No teamId on profile. If they are a student, they should have been assigned one on login.
-            // If we reach here, it might be a race condition or they were just created.
-            // The logic in settings-context should handle assignment.
-            // We can show the "no team" state.
+            // User has a profile but no teamId.
             setIsLoading(false);
           }
         } else {
-          // User document doesn't exist, which shouldn't happen for a logged-in student.
+          // User document doesn't exist.
           setIsLoading(false);
         }
       },
@@ -81,7 +82,9 @@ export default function StudentDashboard() {
       }
     };
 
-    fetchTeamMembers();
+    if (myTeam) {
+      fetchTeamMembers();
+    }
   }, [myTeam]);
 
   // Loading state
