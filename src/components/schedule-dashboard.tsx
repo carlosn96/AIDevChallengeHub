@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { schedule, type ScheduleEvent } from '@/lib/data';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { type ScheduleEvent, type Day } from '@/lib/db-types';
 import { format } from 'date-fns';
 import {
   Card,
@@ -34,6 +36,7 @@ import {
   CalendarDays,
   Radio,
   Sparkles,
+  Loader2
 } from 'lucide-react';
 
 const eventTypeIcons = {
@@ -67,6 +70,9 @@ const EventCard = ({
   isLive: boolean;
   isUpcoming: boolean;
 }) => {
+  const startTime = event.startTime.toDate();
+  const endTime = event.endTime.toDate();
+
   return (
     <Card
       className={`
@@ -114,7 +120,7 @@ const EventCard = ({
               <Clock className="h-3.5 w-3.5 text-primary" />
             </div>
             <span className="font-medium">
-              {`${format(event.startTime, 'HH:mm')} - ${format(event.endTime, 'HH:mm')}`}
+              {`${format(startTime, 'HH:mm')} - ${format(endTime, 'HH:mm')}`}
             </span>
           </div>
 
@@ -137,12 +143,41 @@ const EventCard = ({
 };
 
 export default function ScheduleDashboard() {
-  const [dayFilter, setDayFilter] = useState<'Day 1' | 'Day 2' | 'Day 3'>('Day 1');
+  const [days, setDays] = useState<Day[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeDayId, setActiveDayId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | ScheduleEvent['type']>('all');
   const [liveState, setLiveState] = useState<{
     liveIds: Set<string>;
     upcomingIds: Set<string>;
   }>({ liveIds: new Set(), upcomingIds: new Set() });
+
+  useEffect(() => {
+    if (!db) {
+        setIsLoading(false);
+        return;
+    }
+
+    const unsubDays = onSnapshot(query(collection(db, 'days'), orderBy('date', 'asc')), (snapshot) => {
+        const fetchedDays = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Day));
+        setDays(fetchedDays);
+        if (!activeDayId && fetchedDays.length > 0) {
+            setActiveDayId(fetchedDays[0].id);
+        }
+        setIsLoading(false);
+    });
+
+    const unsubSchedule = onSnapshot(query(collection(db, 'schedule'), orderBy('startTime', 'asc')), (snapshot) => {
+        const fetchedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleEvent));
+        setSchedule(fetchedEvents);
+    });
+
+    return () => {
+        unsubDays();
+        unsubSchedule();
+    };
+  }, [activeDayId]);
 
   useEffect(() => {
     const updateLiveStatus = () => {
@@ -152,9 +187,11 @@ export default function ScheduleDashboard() {
       const newUpcomingIds = new Set<string>();
 
       schedule.forEach(event => {
-        if (now >= event.startTime && now <= event.endTime) {
+        const startTime = event.startTime.toDate();
+        const endTime = event.endTime.toDate();
+        if (now >= startTime && now <= endTime) {
           newLiveIds.add(event.id);
-        } else if (now < event.startTime && event.startTime <= fifteenMinutesFromNow) {
+        } else if (now < startTime && startTime <= fifteenMinutesFromNow) {
           newUpcomingIds.add(event.id);
         }
       });
@@ -166,22 +203,20 @@ export default function ScheduleDashboard() {
     const interval = setInterval(updateLiveStatus, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [schedule]);
 
   const filteredSchedule = useMemo(() => {
     return schedule
       .filter((event) => {
-        const dayMatch = event.day === dayFilter;
+        const dayMatch = event.dayId === activeDayId;
         const typeMatch = typeFilter === 'all' || event.type === typeFilter;
         return dayMatch && typeMatch;
       })
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-  }, [dayFilter, typeFilter]);
-
-  const days: ('Day 1' | 'Day 2' | 'Day 3')[] = ['Day 1', 'Day 2', 'Day 3'];
+      .sort((a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime());
+  }, [activeDayId, typeFilter, schedule]);
 
   const eventStats = useMemo(() => {
-    const dayEvents = schedule.filter(e => e.day === dayFilter);
+    const dayEvents = schedule.filter(e => e.dayId === activeDayId);
     return {
       total: dayEvents.length,
       live: Array.from(liveState.liveIds).filter(id =>
@@ -191,7 +226,49 @@ export default function ScheduleDashboard() {
         dayEvents.some(e => e.id === id)
       ).length,
     };
-  }, [dayFilter, liveState]);
+  }, [activeDayId, liveState, schedule]);
+
+  if (isLoading) {
+    return (
+        <Card className="border-border/50 shadow-lg">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-background to-accent/5">
+                <div className="flex items-center gap-4">
+                    <div className="p-2.5 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30">
+                        <CalendarDays className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Event Schedule</CardTitle>
+                        <CardDescription className="mt-1">Loading schedule...</CardDescription>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="pt-6 text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            </CardContent>
+        </Card>
+    );
+  }
+
+  if (days.length === 0) {
+      return (
+          <Card className="border-border/50 shadow-lg">
+              <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-background to-accent/5">
+                  <div className="flex items-center gap-4">
+                      <div className="p-2.5 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30">
+                          <CalendarDays className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                          <CardTitle className="text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Event Schedule</CardTitle>
+                          <CardDescription className="mt-1">No events scheduled yet.</CardDescription>
+                      </div>
+                  </div>
+              </CardHeader>
+              <CardContent className="pt-6 text-center text-muted-foreground">
+                  The event schedule has not been published yet. Please check back later.
+              </CardContent>
+          </Card>
+      );
+  }
 
   return (
     <Card className="border-border/50 shadow-lg">
@@ -228,16 +305,16 @@ export default function ScheduleDashboard() {
       </CardHeader>
 
       <CardContent className="pt-6">
-      <Tabs value={dayFilter} onValueChange={(value) => setDayFilter(value as any)} className="w-full">
+      <Tabs value={activeDayId || ''} onValueChange={setActiveDayId} className="w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <TabsList className="w-full sm:w-auto grid grid-cols-3 h-11">
+            <TabsList className="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-3 h-auto sm:h-11">
               {days.map((day) => (
                 <TabsTrigger
-                  key={day}
-                  value={day}
+                  key={day.id}
+                  value={day.id}
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-white"
                 >
-                  {day}
+                  {day.title}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -266,7 +343,7 @@ export default function ScheduleDashboard() {
           </div>
 
           {days.map((day) => (
-            <TabsContent key={day} value={day} className="mt-0">
+            <TabsContent key={day.id} value={day.id} className="mt-0">
               {filteredSchedule.length > 0 ? (
                 <div className="space-y-4">
                   {filteredSchedule.map((event) => (
@@ -285,7 +362,7 @@ export default function ScheduleDashboard() {
                       <CalendarDays className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <p className="text-muted-foreground text-center">
-                      No events match your filters for <strong>{day}</strong>
+                      No events match your filters for <strong>{day.title}</strong>
                     </p>
                     <p className="text-sm text-muted-foreground/60 mt-2">
                       Try changing the filters

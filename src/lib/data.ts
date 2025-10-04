@@ -72,6 +72,9 @@ export const teams: Team[] = [
 
 const today = startOfDay(new Date());
 
+/**
+ * @deprecated The schedule is now fetched dynamically from Firestore. This data is for reference only.
+ */
 export const schedule: ScheduleEvent[] = [
   {
     id: 'evt-1',
