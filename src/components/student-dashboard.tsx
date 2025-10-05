@@ -104,7 +104,7 @@ export default function StudentDashboard() {
   if (isAuthLoading || isDataLoading) {
     return (
       <div className="space-y-4">
-        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6 h-[120px]">
           <div className="flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <div>
@@ -119,10 +119,10 @@ export default function StudentDashboard() {
         </div>
         <div className="grid gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Skeleton className="h-[700px] w-full rounded-xl" />
+            <Skeleton className="h-[700px] lg:h-[800px] w-full rounded-xl" />
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
-            <Skeleton className="h-[700px] w-full rounded-xl" />
+            <Skeleton className="h-[700px] lg:h-[800px] w-full rounded-xl" />
           </div>
         </div>
       </div>
