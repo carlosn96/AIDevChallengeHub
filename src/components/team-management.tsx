@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -18,10 +18,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { type Team, type UserProfile, type Project } from '@/lib/db-types';
-import { assignProjectToTeam, removeUserFromTeam, deleteTeam } from '@/lib/user-actions';
+import { type Team, type UserProfile, type Project, type Activity } from '@/lib/db-types';
+import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, XCircle, Loader2, AlertTriangle, UserX } from 'lucide-react';
+import { Users, Search, Trash2, XCircle, Loader2, AlertTriangle, UserX, ListChecks } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -46,18 +46,29 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from './ui/separator';
+import { Checkbox } from './ui/checkbox';
 
 type TeamManagementProps = {
   teams: Team[];
   users: UserProfile[];
   projects: Project[];
+  activities: Activity[];
 };
 
-export default function TeamManagement({ teams, users, projects }: TeamManagementProps) {
+export default function TeamManagement({ teams, users, projects, activities }: TeamManagementProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [isSavingActivities, setIsSavingActivities] = useState(false);
+
+  useEffect(() => {
+    if (selectedTeam) {
+      setSelectedActivities(selectedTeam.activityIds || []);
+    }
+  }, [selectedTeam]);
 
   const usersMap = useMemo(() => new Map(users.map(u => [u.uid, u])), [users]);
 
@@ -118,6 +129,23 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
       setIsProcessing(false);
     }
   };
+  
+  const handleAssignActivities = async () => {
+    if (!selectedTeam) return;
+    setIsSavingActivities(true);
+    try {
+      await assignActivitiesToTeam(selectedTeam.id, selectedActivities);
+      toast({ title: 'Activities Assigned', description: `Activities for ${selectedTeam.name} have been updated.`});
+      setIsActivityDialogOpen(false);
+      // Refresh local state to reflect change
+      setSelectedTeam(prev => prev ? { ...prev, activityIds: selectedActivities } : null);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to assign activities.' });
+    } finally {
+      setIsSavingActivities(false);
+    }
+  };
 
   const filteredTeams = useMemo(() => {
     const lowercasedSearchTerm = searchTerm.toLowerCase().trim();
@@ -171,6 +199,7 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
                 <TableHead>Team Name</TableHead>
                 <TableHead>Members</TableHead>
                 <TableHead className="w-[300px]">Assigned Project</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,6 +241,12 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
                       notFoundMessage='No project found.'
                     />
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedTeam(team); setIsActivityDialogOpen(true); }}>
+                        <ListChecks className="mr-2 h-4 w-4" />
+                        Activities
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -225,7 +260,7 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
       </Card>
 
       {/* Team Details Dialog */}
-      <Dialog open={!!selectedTeam} onOpenChange={(isOpen) => !isOpen && setSelectedTeam(null)}>
+      <Dialog open={!!selectedTeam && !isActivityDialogOpen} onOpenChange={(isOpen) => !isOpen && setSelectedTeam(null)}>
         <DialogContent className="sm:max-w-lg">
           {teamDetails && (
             <>
@@ -322,6 +357,46 @@ export default function TeamManagement({ teams, users, projects }: TeamManagemen
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Assign Activities Dialog */}
+      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Assign Activities for {selectedTeam?.name}</DialogTitle>
+                <DialogDescription>Select the activities to assign to this team.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-4 max-h-[400px] overflow-y-auto">
+                {activities.map(activity => (
+                    <div key={activity.id} className="flex items-center space-x-3">
+                        <Checkbox
+                            id={`activity-${activity.id}`}
+                            checked={selectedActivities.includes(activity.id)}
+                            onCheckedChange={(checked) => {
+                                setSelectedActivities(prev => 
+                                    checked 
+                                    ? [...prev, activity.id]
+                                    : prev.filter(id => id !== activity.id)
+                                );
+                            }}
+                        />
+                        <label
+                            htmlFor={`activity-${activity.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            {activity.title}
+                        </label>
+                    </div>
+                ))}
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                <Button onClick={handleAssignActivities} disabled={isSavingActivities}>
+                    {isSavingActivities && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Assignments
+                </Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

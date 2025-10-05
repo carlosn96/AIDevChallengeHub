@@ -17,7 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { type User } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity } from './db-types';
 import { type UserRole, getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -236,6 +236,28 @@ export const getTeamMembers = async (memberIds: string[]): Promise<UserProfile[]
   }
 };
 
+/**
+ * Retrieves a set of activities by their IDs.
+ * @param activityIds An array of activity IDs.
+ * @returns A promise that resolves to an array of Activity objects.
+ */
+export const getActivitiesByIds = async (activityIds: string[]): Promise<Activity[]> => {
+  if (!db || !activityIds || activityIds.length === 0) {
+    return [];
+  }
+  const activitiesRef = collection(db, 'activities');
+  const q = query(activitiesRef, where('__name__', 'in', activityIds));
+
+  try {
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity));
+  } catch (error) {
+    console.error("Error fetching activities by IDs: ", error);
+    return [];
+  }
+};
+
+
 // --- Manager Actions ---
 
 /**
@@ -413,6 +435,34 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
     projectId: projectId,
   });
 };
+
+// Activity Actions
+export const createActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const collectionRef = collection(db, 'activities');
+  const newDocRef = await addDoc(collectionRef, {
+    ...activity,
+    createdAt: serverTimestamp(),
+  });
+  return newDocRef.id;
+};
+
+export const updateActivity = async (activityId: string, data: Partial<Omit<Activity, 'id'>>) => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    await updateDoc(doc(db, 'activities', activityId), data);
+};
+
+export const deleteActivity = async (activityId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  await deleteDoc(doc(db, 'activities', activityId));
+};
+
+export const assignActivitiesToTeam = async (teamId: string, activityIds: string[]) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const teamRef = doc(db, 'teams', teamId);
+  await updateDoc(teamRef, { activityIds });
+};
+
 
 // Settings Actions
 export const updateLoginSettings = async (settings: LoginSettings) => {

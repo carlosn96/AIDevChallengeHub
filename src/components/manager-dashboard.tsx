@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings } from 'lucide-react';
-import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings } from '@/lib/db-types';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks } from 'lucide-react';
+import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
 import ScheduleManagement from './schedule-management';
 import SettingsManagement from './settings-management';
+import ActivityManagement from './activity-management';
 
 
 export default function ManagerDashboard() {
@@ -18,6 +19,7 @@ export default function ManagerDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
   const [days, setDays] = useState<Day[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -28,7 +30,7 @@ export default function ManagerDashboard() {
     };
 
     const unsubscribes: (() => void)[] = [];
-    let loadingCounter = 6;
+    let loadingCounter = 7; // Increased to 7 for activities
     const onDataLoaded = () => {
         loadingCounter--;
         if (loadingCounter === 0) {
@@ -58,6 +60,11 @@ export default function ManagerDashboard() {
     
     unsubscribes.push(onSnapshot(query(collection(db, 'days'), orderBy('date', 'asc')), (snapshot) => {
         setDays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Day)));
+        onDataLoaded();
+    }, () => onDataLoaded()));
+    
+    unsubscribes.push(onSnapshot(query(collection(db, 'activities'), orderBy('createdAt', 'desc')), (snapshot) => {
+        setActivities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity)));
         onDataLoaded();
     }, () => onDataLoaded()));
 
@@ -95,7 +102,7 @@ export default function ManagerDashboard() {
       </div>
 
       <Tabs defaultValue="teams" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-12">
+        <TabsList className="grid w-full grid-cols-5 h-12">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2" />
             Team Management
@@ -108,19 +115,26 @@ export default function ManagerDashboard() {
             <FolderKanban className="mr-2" />
             Projects
           </TabsTrigger>
+          <TabsTrigger value="activities" className="h-full">
+            <ListChecks className="mr-2" />
+            Activities
+          </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
             <Settings className="mr-2" />
             Settings
           </TabsTrigger>
         </TabsList>
         <TabsContent value="teams" className="mt-6">
-            <TeamManagement teams={teams} users={users} projects={projects} />
+            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-6">
             <ScheduleManagement schedule={schedule} days={days} />
         </TabsContent>
         <TabsContent value="projects" className="mt-6">
             <ProjectManagement projects={projects} />
+        </TabsContent>
+        <TabsContent value="activities" className="mt-6">
+            <ActivityManagement activities={activities} />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
             <SettingsManagement settings={loginSettings} />

@@ -15,6 +15,7 @@ export type Team = {
   name: string;
   memberIds: string[];
   projectId?: string;
+  activityIds?: string[]; // NEW
   memberCount: number;
   createdAt: Timestamp;
 };
@@ -24,6 +25,16 @@ export type Project = {
   name: string;
   description: string;
   ods?: number[]; // Sustainable Development Goals (SDGs)
+  createdAt: Timestamp;
+};
+
+// NEW Activity Type
+export type Activity = {
+  id: string;
+  title: string;
+  description: string;
+  type: 'workshop' | 'conference' | 'task';
+  sdg?: number; // Optional related SDG
   createdAt: Timestamp;
 };
 

@@ -6,8 +6,8 @@ import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { useSettings } from '@/context/settings-context';
 import TeamCard from '@/components/team-card';
 import ScheduleDashboard from '@/components/schedule-dashboard';
-import { type UserProfile, type Team as DbTeam, type Project } from '@/lib/db-types';
-import { getTeamMembers } from '@/lib/user-actions';
+import { type UserProfile, type Team as DbTeam, type Project, type Activity } from '@/lib/db-types';
+import { getTeamMembers, getActivitiesByIds } from '@/lib/user-actions';
 import { Loader2, Users, Calendar, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,7 @@ export default function StudentDashboard() {
   const [myTeam, setMyTeam] = useState<DbTeam | null>(null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [assignedProject, setAssignedProject] = useState<Project | null>(null);
+  const [assignedActivities, setAssignedActivities] = useState<Activity[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
   // Effect 1: Listen for the user's own profile document
@@ -48,6 +49,7 @@ export default function StudentDashboard() {
       setMyTeam(null);
       setTeamMembers([]);
       setAssignedProject(null);
+      setAssignedActivities([]);
       return;
     }
 
@@ -56,6 +58,7 @@ export default function StudentDashboard() {
         const teamData = { id: teamDoc.id, ...teamDoc.data() } as DbTeam;
         setMyTeam(teamData);
 
+        // Fetch Members
         if (teamData.memberIds && teamData.memberIds.length > 0) {
             try {
               const members = await getTeamMembers(teamData.memberIds);
@@ -68,11 +71,25 @@ export default function StudentDashboard() {
             setTeamMembers([]);
         }
 
+        // Fetch Project
         if (teamData.projectId) {
             const projectSnap = await getDoc(doc(db, 'projects', teamData.projectId));
             setAssignedProject(projectSnap.exists() ? { id: projectSnap.id, ...projectSnap.data() } as Project : null);
         } else {
             setAssignedProject(null);
+        }
+
+        // Fetch Activities
+        if (teamData.activityIds && teamData.activityIds.length > 0) {
+          try {
+            const activities = await getActivitiesByIds(teamData.activityIds);
+            setAssignedActivities(activities);
+          } catch (error) {
+            console.error("Failed to fetch assigned activities:", error);
+            setAssignedActivities([]);
+          }
+        } else {
+          setAssignedActivities([]);
         }
 
       } else {
@@ -201,6 +218,7 @@ export default function StudentDashboard() {
               members={teamMembers}
               currentUserId={user?.uid || ''}
               project={assignedProject}
+              activities={assignedActivities}
             />}
           </div>
         </div>
