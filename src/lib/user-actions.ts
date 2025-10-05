@@ -207,6 +207,7 @@ export const updateTeamName = async (teamId: string, newName: string) => {
   const teamRef = doc(db, 'teams', teamId);
   await updateDoc(teamRef, {
     name: newName,
+    updatedAt: serverTimestamp(),
   });
 };
 
@@ -283,6 +284,7 @@ export const removeUserFromTeam = async (teamId: string, userId: string) => {
     batch.update(teamRef, {
       memberIds: updatedMemberIds,
       memberCount: updatedMemberIds.length,
+      updatedAt: serverTimestamp(),
     });
   }
 
@@ -322,18 +324,22 @@ export const deleteTeam = async (teamId: string) => {
 
 
 // Day Actions
-export const createDay = async (day: Omit<Day, 'id' | 'createdAt'>): Promise<string> => {
+export const createDay = async (day: Omit<Day, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");
   const newDocRef = await addDoc(collection(db, 'days'), {
     ...day,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   return newDocRef.id;
 };
 
 export const updateDay = async (dayId: string, data: Partial<Omit<Day, 'id'>>) => {
   if (!db) throw new Error("Firestore is not initialized.");
-  await updateDoc(doc(db, 'days', dayId), data);
+  await updateDoc(doc(db, 'days', dayId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
 };
 
 export const deleteDay = async (dayId: string) => {
@@ -356,7 +362,7 @@ export const deleteDay = async (dayId: string) => {
 
 // Event Actions
 export const createOrUpdateEvent = async (
-    event: Omit<ScheduleEvent, 'id' | 'startTime' | 'endTime'> & {
+    event: Omit<ScheduleEvent, 'id' | 'startTime' | 'endTime' | 'updatedAt'> & {
         id?: string;
         startTime: Date | Timestamp;
         endTime: Date | Timestamp;
@@ -369,6 +375,7 @@ export const createOrUpdateEvent = async (
         ...event,
         startTime: event.startTime instanceof Date ? Timestamp.fromDate(event.startTime) : event.startTime,
         endTime: event.endTime instanceof Date ? Timestamp.fromDate(event.endTime) : event.endTime,
+        updatedAt: serverTimestamp(),
     };
     
     if (eventData.id) {
@@ -378,7 +385,10 @@ export const createOrUpdateEvent = async (
         return eventData.id;
     } else {
         const { id, ...dataToCreate } = eventData;
-        const newDocRef = await addDoc(collection(db, 'schedule'), dataToCreate);
+        const newDocRef = await addDoc(collection(db, 'schedule'), {
+          ...dataToCreate,
+          createdAt: serverTimestamp() // Add createdAt for new events
+        });
         return newDocRef.id;
     }
 };
@@ -391,12 +401,13 @@ export const deleteEvent = async (eventId: string) => {
 
 
 // Project Actions
-export const createProject = async (project: Omit<Project, 'id' | 'createdAt'>): Promise<string> => {
+export const createProject = async (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");
   const collectionRef = collection(db, 'projects');
   const newDocRef = await addDoc(collectionRef, {
     ...project,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   return newDocRef.id;
 };
@@ -404,7 +415,10 @@ export const createProject = async (project: Omit<Project, 'id' | 'createdAt'>):
 export const updateProject = async (projectId: string, data: Partial<Omit<Project, 'id'>>) => {
     if (!db) throw new Error("Firestore is not initialized.");
     const projectRef = doc(db, 'projects', projectId);
-    await updateDoc(projectRef, data);
+    await updateDoc(projectRef, {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
 };
 
 export const deleteProject = async (projectId: string) => {
@@ -433,23 +447,28 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
   const teamRef = doc(db, 'teams', teamId);
   await updateDoc(teamRef, {
     projectId: projectId,
+    updatedAt: serverTimestamp(),
   });
 };
 
 // Activity Actions
-export const createActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<string> => {
+export const createActivity = async (activity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized.");
   const collectionRef = collection(db, 'activities');
   const newDocRef = await addDoc(collectionRef, {
     ...activity,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
   return newDocRef.id;
 };
 
 export const updateActivity = async (activityId: string, data: Partial<Omit<Activity, 'id'>>) => {
     if (!db) throw new Error("Firestore is not initialized.");
-    await updateDoc(doc(db, 'activities', activityId), data);
+    await updateDoc(doc(db, 'activities', activityId), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
 };
 
 export const deleteActivity = async (activityId: string) => {
@@ -458,9 +477,13 @@ export const deleteActivity = async (activityId: string) => {
 };
 
 export const assignActivitiesToTeam = async (teamId: string, activityIds: string[]) => {
-  if (!db) throw new Error("Firestore is not initialized.");
+  if (!db) throw new Error("Firebase not initialized");
+  
   const teamRef = doc(db, 'teams', teamId);
-  await updateDoc(teamRef, { activityIds });
+  await updateDoc(teamRef, {
+    activityIds: activityIds,
+    updatedAt: serverTimestamp(),
+  });
 };
 
 

@@ -15,9 +15,10 @@ export type Team = {
   name: string;
   memberIds: string[];
   projectId?: string;
-  activityIds?: string[]; // NEW
+  activityIds?: string[];
   memberCount: number;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 };
 
 export type Project = {
@@ -26,9 +27,9 @@ export type Project = {
   description: string;
   ods?: number[]; // Sustainable Development Goals (SDGs)
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 };
 
-// NEW Activity Type
 export type Activity = {
   id: string;
   title: string;
@@ -36,6 +37,7 @@ export type Activity = {
   type: 'workshop' | 'conference' | 'task';
   sdg?: number; // Optional related SDG
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 };
 
 export type Day = {
@@ -43,6 +45,7 @@ export type Day = {
   title: string;
   date: Timestamp;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 };
 
 export type ScheduleEvent = {
@@ -54,6 +57,7 @@ export type ScheduleEvent = {
   endTime: Timestamp;
   description: string;
   location: string;
+  updatedAt?: Timestamp;
 };
 
 export type LoginSettings = {
