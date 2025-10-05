@@ -214,15 +214,13 @@ export default function StudentDashboard() {
 
       <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
         <div className="lg:col-span-4 xl:col-span-3">
-          <div>
-            {myTeam && <TeamCard
-              team={myTeam}
-              members={teamMembers}
-              currentUserId={user?.uid || ''}
-              project={assignedProject}
-              activities={assignedActivities}
-            />}
-          </div>
+          {myTeam && <TeamCard
+            team={myTeam}
+            members={teamMembers}
+            currentUserId={user?.uid || ''}
+            project={assignedProject}
+            activities={assignedActivities}
+          />}
         </div>
 
         <div className="lg:col-span-8 xl:col-span-9">
