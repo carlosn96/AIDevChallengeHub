@@ -361,38 +361,54 @@ export default function TeamManagement({ teams, users, projects, activities }: T
       </Dialog>
       
       {/* Assign Activities Dialog */}
-      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+       <Dialog open={isActivityDialogOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          setIsActivityDialogOpen(false);
+          // Small delay to prevent main dialog from re-opening
+          setTimeout(() => setSelectedTeam(null), 150);
+        } else {
+          setIsActivityDialogOpen(true);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Assign Activities for {selectedTeam?.name}</DialogTitle>
                 <DialogDescription>Select the activities to assign to this team.</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-4 max-h-[400px] overflow-y-auto">
-                {activities.map(activity => (
-                    <div key={activity.id} className="flex items-center space-x-3">
-                        <Checkbox
-                            id={`activity-${activity.id}`}
-                            checked={selectedActivities.includes(activity.id)}
-                            onCheckedChange={(checked) => {
-                                setSelectedActivities(prev => 
-                                    checked 
-                                    ? [...prev, activity.id]
-                                    : prev.filter(id => id !== activity.id)
-                                );
-                            }}
-                        />
-                        <label
-                            htmlFor={`activity-${activity.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                            {activity.title}
-                        </label>
-                    </div>
-                ))}
+                {activities.length > 0 ? (
+                  activities.map(activity => (
+                      <div key={activity.id} className="flex items-center space-x-3">
+                          <Checkbox
+                              id={`activity-${activity.id}`}
+                              checked={selectedActivities.includes(activity.id)}
+                              onCheckedChange={(checked) => {
+                                  setSelectedActivities(prev => 
+                                      checked 
+                                      ? [...prev, activity.id]
+                                      : prev.filter(id => id !== activity.id)
+                                  );
+                              }}
+                          />
+                          <label
+                              htmlFor={`activity-${activity.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                              {activity.title}
+                          </label>
+                      </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No activities available to assign.
+                  </p>
+                )}
             </div>
             <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={handleAssignActivities} disabled={isSavingActivities}>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleAssignActivities} disabled={isSavingActivities || activities.length === 0}>
                     {isSavingActivities && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Assignments
                 </Button>
