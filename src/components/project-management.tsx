@@ -81,14 +81,14 @@ const projectSchema = z.object({
     if (numbers.some(isNaN)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "All ODS must be valid numbers."
+        message: "All SDGs must be valid numbers."
       });
       return z.NEVER;
     }
     if (numbers.some(n => n < 1 || n > 17)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "ODS numbers must be between 1 and 17."
+        message: "SDG numbers must be between 1 and 17."
       });
       return z.NEVER;
     }
@@ -326,12 +326,12 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                     <div className="mt-4">
                       <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                         <Target className="h-3 w-3" />
-                        Impacted ODS
+                        Impacted SDGs
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {project.ods.map(odsNum => (
                           <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                            ODS {odsNum}
+                            SDG {odsNum}
                           </Badge>
                         ))}
                       </div>
@@ -413,7 +413,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="ods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Impacted ODS</FormLabel>
+                    <FormLabel className="text-sm font-medium">Impacted SDGs</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="e.g., 3, 10, 17" 
@@ -422,7 +422,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter the ODS numbers separated by commas.
+                      Enter the SDG numbers separated by commas.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -497,7 +497,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="ods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Impacted ODS</FormLabel>
+                    <FormLabel className="text-sm font-medium">Impacted SDGs</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="e.g., 3, 10, 17" 
@@ -506,7 +506,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                       />
                     </FormControl>
                     <FormDescription>
-                      Enter the ODS numbers separated by commas.
+                      Enter the SDG numbers separated by commas.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

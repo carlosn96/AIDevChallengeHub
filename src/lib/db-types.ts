@@ -23,7 +23,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
-  ods?: number[];
+  ods?: number[]; // Sustainable Development Goals (SDGs)
   createdAt: Timestamp;
 };
 

@@ -199,12 +199,12 @@ export default function TeamCard({ team, members, currentUserId, project }: Team
                                   <div>
                                     <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                                       <Target className="h-3 w-3" />
-                                      Impacted ODS
+                                      Impacted SDGs
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
                                       {project.ods.map(odsNum => (
                                         <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                                          ODS {odsNum}
+                                          SDG {odsNum}
                                         </Badge>
                                       ))}
                                     </div>
