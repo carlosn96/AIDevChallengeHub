@@ -103,8 +103,8 @@ export default function StudentDashboard() {
 
   if (isAuthLoading || isDataLoading) {
     return (
-      <div className="space-y-4 md:space-y-6">
-        <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+      <div className="space-y-4">
+        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
           <div className="flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <div>
@@ -117,12 +117,12 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Skeleton className="h-[550px] w-full rounded-xl md:rounded-2xl" />
+            <Skeleton className="h-[700px] w-full rounded-xl" />
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
-            <Skeleton className="h-[600px] w-full rounded-xl md:rounded-2xl" />
+            <Skeleton className="h-[700px] w-full rounded-xl" />
           </div>
         </div>
       </div>
@@ -131,8 +131,8 @@ export default function StudentDashboard() {
 
   if (userProfile && !myTeam) {
     return (
-      <div className="space-y-4 md:space-y-6">
-        <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+      <div className="space-y-4">
+        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           <div className="relative">
             <div className="flex items-start justify-between">
@@ -149,9 +149,9 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Card className="border-dashed border-2 border-muted-foreground/25 relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+            <Card className="border-dashed border-2 border-muted-foreground/25 h-[700px]">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto mb-4 flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-primary/10">
                   <Users className="h-6 w-6 md:h-8 md:w-8 text-primary" />
@@ -168,9 +168,7 @@ export default function StudentDashboard() {
           </div>
 
           <div className="lg:col-span-8 xl:col-span-9">
-            <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
-              <ScheduleDashboard />
-            </div>
+            <ScheduleDashboard />
           </div>
         </div>
       </div>
@@ -179,8 +177,8 @@ export default function StudentDashboard() {
 
   // Full dashboard with team
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+    <div className="space-y-4">
+      <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
         <div className="relative">
           <div className="flex flex-col gap-3 md:gap-4">
@@ -216,9 +214,9 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-4 xl:col-span-3">
-          <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
+          <div className="lg:sticky lg:top-4">
             {myTeam && <TeamCard
               team={myTeam}
               members={teamMembers}
@@ -230,9 +228,7 @@ export default function StudentDashboard() {
         </div>
 
         <div className="lg:col-span-8 xl:col-span-9">
-          <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
-            <ScheduleDashboard />
-          </div>
+          <ScheduleDashboard />
         </div>
       </div>
     </div>
