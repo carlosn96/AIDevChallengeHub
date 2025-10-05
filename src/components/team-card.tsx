@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -16,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle } from 'lucide-react';
+import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle, Target } from 'lucide-react';
 import { updateTeamName } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
@@ -194,8 +193,23 @@ export default function TeamCard({ team, members, currentUserId, project }: Team
                                     {project.name}
                                 </DialogTitle>
                             </DialogHeader>
-                            <div className="py-4 text-sm text-muted-foreground">
+                            <div className="py-4 text-sm text-muted-foreground space-y-4">
                                 <p>{project.description}</p>
+                                {project.ods && project.ods.length > 0 && (
+                                  <div>
+                                    <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                                      <Target className="h-3 w-3" />
+                                      ODS Impactados
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {project.ods.map(odsNum => (
+                                        <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                          ODS {odsNum}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                         </DialogContent>
                     </Dialog>

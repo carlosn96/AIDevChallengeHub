@@ -47,7 +47,7 @@ export async function getUserRole(email: string): Promise<UserRole> {
   
     const [localPart, domain] = email.split('@');
   
-    // 2. Apply format-based rules for other roles.
+    /*// 2. Apply format-based rules for other roles.
     const isTeacherFormat = /^[a-zA-Z]+\.[a-zA-Z]+$/.test(localPart); // e.g., jhon.doe
     const isAdminFormat = /^[a-zA-Z][a-zA-Z]+$/.test(localPart); // e.g., jdoe
     const isStudentFormat = /\d/.test(localPart); // e.g., a12354b, 12354
@@ -63,8 +63,9 @@ export async function getUserRole(email: string): Promise<UserRole> {
   
     if (isStudentFormat) {
       return 'Student';
-    }
+    }*/
+    return 'Student';
   
     // Default to null if no specific role is matched
-    return null;
+    //return null;
 }
