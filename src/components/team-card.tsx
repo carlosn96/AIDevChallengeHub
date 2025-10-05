@@ -233,7 +233,7 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                   Assigned Activities
               </h3>
               {activities.length > 0 ? (
-                  <ScrollArea className="h-48">
+                  <ScrollArea className="h-32">
                     <div className="space-y-2 pr-4">
                       {activities.map(activity => (
                         <Dialog key={activity.id}>
