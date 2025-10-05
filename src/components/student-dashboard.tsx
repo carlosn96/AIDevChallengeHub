@@ -104,25 +104,13 @@ export default function StudentDashboard() {
   if (isAuthLoading || isDataLoading) {
     return (
       <div className="space-y-4">
-        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6 h-[120px]">
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <div>
-              <h1 className="text-lg md:text-xl font-bold">
-                Loading your dashboard...
-              </h1>
-              <p className="text-muted-foreground text-xs md:text-sm">
-                  Please wait while we get everything ready.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Skeleton className="h-[120px] w-full rounded-xl" />
         <div className="grid gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Skeleton className="h-[700px] lg:h-[800px] w-full rounded-xl" />
+            <Skeleton className="h-[700px] w-full rounded-xl" />
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
-            <Skeleton className="h-[700px] lg:h-[800px] w-full rounded-xl" />
+            <Skeleton className="h-[700px] w-full rounded-xl" />
           </div>
         </div>
       </div>
@@ -151,18 +139,18 @@ export default function StudentDashboard() {
 
         <div className="grid gap-4 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Card className="border-dashed border-2 border-muted-foreground/25 h-[700px]">
+            <Card className="border-dashed border-2 border-muted-foreground/25 h-full">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-primary/10">
-                  <Users className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Users className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle className="text-lg md:text-xl">Team Pending</CardTitle>
-                <CardDescription className="text-xs md:text-sm">
+                <CardTitle className="text-xl">Team Pending</CardTitle>
+                <CardDescription>
                   You are being assigned to a team. This should only take a moment.
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
-                 <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
               </CardContent>
             </Card>
           </div>
@@ -180,8 +168,7 @@ export default function StudentDashboard() {
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
-        <div className="relative">
-          <div className="flex flex-col gap-3 md:gap-4">
+        <div className="relative flex flex-col gap-3 md:gap-4">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1 md:mb-2 truncate">
@@ -210,23 +197,21 @@ export default function StudentDashboard() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-4 xl:col-span-3">
-          <div className="lg:sticky lg:top-4">
-            {myTeam && <TeamCard
+          {myTeam && (
+            <TeamCard
               team={myTeam}
               members={teamMembers}
               currentUserId={user?.uid || ''}
               project={assignedProject}
               activities={assignedActivities}
-            />}
-          </div>
+            />
+          )}
         </div>
-
         <div className="lg:col-span-8 xl:col-span-9">
           <ScheduleDashboard />
         </div>
