@@ -33,11 +33,9 @@ export type Project = {
 export type Activity = {
   id: string;
   title: string;
-  description: string;
-  type: 'workshop' | 'conference' | 'task';
-  sdg?: number; // Optional related SDG
+  description?: string;
   createdAt: Timestamp;
-  updatedAt?: Timestamp;
+  updatedAt: Timestamp;
 };
 
 export type Day = {
