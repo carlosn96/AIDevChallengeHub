@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -102,21 +103,21 @@ export default function TeamCard({ team, members, currentUserId, project, activi
   };
 
   if (!team) {
-    return null; // Don't render if team is not available
+    return null;
   }
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col">
       <CardHeader>
         <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-muted rounded-md">
                     <Users className="h-6 w-6 text-primary" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                     <CardDescription>Your Team</CardDescription>
                     {!isEditing ? (
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 truncate">
                         {teamName}
                         </CardTitle>
                     ) : (
@@ -137,7 +138,7 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                 <span className="sr-only">Edit team name</span>
             </Button>
             ) : (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                     <Button variant="ghost" size="icon" onClick={handleSave} disabled={isSaving} className="h-8 w-8 text-green-500 hover:text-green-500">
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         <span className="sr-only">Save team name</span>
@@ -150,33 +151,35 @@ export default function TeamCard({ team, members, currentUserId, project, activi
             )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 flex-1">
+      <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">Team members:</p>
-        <ul className="space-y-3">
-          {sortedMembers.map((member) => (
-            <li key={member.uid} className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                {member.photoURL && (
-                  <AvatarImage src={member.photoURL} alt={member.displayName || 'member'} />
-                )}
-                <AvatarFallback>
-                  {member.displayName
-                    ?.split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div className='flex items-center'>
-                <span className="font-medium">{member.displayName}</span>
-                {member.uid === currentUserId && (
-                    <Badge variant="outline" className="ml-2">
-                    You
-                    </Badge>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="min-h-[120px]">
+          <ul className="space-y-3">
+            {sortedMembers.map((member) => (
+              <li key={member.uid} className="flex items-center gap-3">
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  {member.photoURL && (
+                    <AvatarImage src={member.photoURL} alt={member.displayName || 'member'} />
+                  )}
+                  <AvatarFallback>
+                    {member.displayName
+                      ?.split(' ')
+                      .map((n) => n[0])
+                      .join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='flex items-center min-w-0 flex-1'>
+                  <span className="font-medium truncate">{member.displayName}</span>
+                  {member.uid === currentUserId && (
+                      <Badge variant="outline" className="ml-2 flex-shrink-0">
+                      You
+                      </Badge>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4">
           <div className="w-full">
@@ -184,47 +187,49 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                   <FileCode className="h-4 w-4 text-primary" />
                   Assigned Project
               </h3>
-              {project ? (
-                  <Dialog>
-                      <DialogTrigger asChild>
-                          <div className="text-sm bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
-                              <p className="font-semibold truncate">{project.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{project.description}</p>
-                          </div>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
-                          <DialogHeader>
-                              <DialogTitle className="flex items-center gap-3">
-                                  <FileCode className="h-5 w-5 text-primary" />
-                                  {project.name}
-                              </DialogTitle>
-                          </DialogHeader>
-                          <div className="py-4 text-sm text-muted-foreground space-y-4">
-                              <p>{project.description}</p>
-                              {project.ods && project.ods.length > 0 && (
-                                <div>
-                                  <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                                    <Target className="h-3 w-3" />
-                                    Impacted SDGs
-                                  </h4>
-                                  <div className="flex flex-wrap gap-2">
-                                    {project.ods.map(odsNum => (
-                                      <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
-                                        SDG {odsNum}
-                                      </Badge>
-                                    ))}
+              <div className="min-h-[60px]">
+                {project ? (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <div className="text-sm bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
+                                <p className="font-semibold truncate">{project.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{project.description}</p>
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-3">
+                                    <FileCode className="h-5 w-5 text-primary" />
+                                    {project.name}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 text-sm text-muted-foreground space-y-4">
+                                <p>{project.description}</p>
+                                {project.ods && project.ods.length > 0 && (
+                                  <div>
+                                    <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                                      <Target className="h-3 w-3" />
+                                      Impacted SDGs
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {project.ods.map(odsNum => (
+                                        <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                          SDG {odsNum}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                          </div>
-                      </DialogContent>
-                  </Dialog>
-              ) : (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <HelpCircle className="h-4 w-4" />
-                      <span>No project assigned yet.</span>
-                  </div>
-              )}
+                                )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4" />
+                        <span>No project assigned yet.</span>
+                    </div>
+                )}
+              </div>
           </div>
           <Separator />
           <div className="w-full">
@@ -232,37 +237,39 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                   <ListChecks className="h-4 w-4 text-primary" />
                   Assigned Activities
               </h3>
-              {activities.length > 0 ? (
-                  <ScrollArea className="h-32">
-                    <div className="space-y-2 pr-4">
-                      {activities.map(activity => (
-                        <Dialog key={activity.id}>
-                          <DialogTrigger asChild>
-                              <div className="text-sm w-full bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
-                                  <p className="font-semibold truncate">{activity.title}</p>
-                              </div>
-                          </DialogTrigger>
-                           <DialogContent className="sm:max-w-lg">
-                              <DialogHeader>
-                                  <DialogTitle className="flex items-center gap-3">
-                                      <ListChecks className="h-5 w-5 text-primary" />
-                                      {activity.title}
-                                  </DialogTitle>
-                              </DialogHeader>
-                              <div className="py-4 text-sm text-muted-foreground space-y-4">
-                                  <p>{activity.description}</p>
-                              </div>
-                          </DialogContent>
-                        </Dialog>
-                      ))}
+              <div className="min-h-[128px]">
+                {activities.length > 0 ? (
+                    <ScrollArea className="h-32">
+                      <div className="space-y-2 pr-4">
+                        {activities.map(activity => (
+                          <Dialog key={activity.id}>
+                            <DialogTrigger asChild>
+                                <div className="text-sm w-full bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
+                                    <p className="font-semibold truncate">{activity.title}</p>
+                                </div>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-lg">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-3">
+                                        <ListChecks className="h-5 w-5 text-primary" />
+                                        {activity.title}
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4 text-sm text-muted-foreground space-y-4">
+                                    <p>{activity.description}</p>
+                                </div>
+                            </DialogContent>
+                          </Dialog>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <HelpCircle className="h-4 w-4" />
+                        <span>No activities assigned yet.</span>
                     </div>
-                  </ScrollArea>
-              ) : (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <HelpCircle className="h-4 w-4" />
-                      <span>No activities assigned yet.</span>
-                  </div>
-              )}
+                )}
+              </div>
           </div>
       </CardFooter>
     </Card>
