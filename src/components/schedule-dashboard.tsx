@@ -199,8 +199,6 @@ export default function ScheduleDashboard() {
       setLiveState({ liveIds: newLiveIds, upcomingIds: newUpcomingIds });
     };
 
-    // Run once on mount and then set an interval.
-    // This ensures the logic only runs on the client, avoiding hydration errors.
     updateLiveStatus();
     const interval = setInterval(updateLiveStatus, 60000);
 
@@ -273,8 +271,8 @@ export default function ScheduleDashboard() {
   }
 
   return (
-    <Card className="border-border/50 shadow-lg">
-      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-background to-accent/5">
+    <Card className="border-border/50 shadow-lg h-[700px] lg:h-auto flex flex-col">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-background to-accent/5 flex-shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-2.5 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30">
@@ -306,9 +304,9 @@ export default function ScheduleDashboard() {
         </div>
       </CardHeader>
 
-      <CardContent className="pt-6">
-      <Tabs value={activeDayId || ''} onValueChange={setActiveDayId} className="w-full">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <CardContent className="pt-6 flex-1 overflow-y-auto">
+      <Tabs value={activeDayId || ''} onValueChange={setActiveDayId} className="w-full h-full flex flex-col">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 flex-shrink-0">
             <TabsList className="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-3 h-auto sm:h-11">
               {days.map((day) => (
                 <TabsTrigger
@@ -345,9 +343,9 @@ export default function ScheduleDashboard() {
           </div>
 
           {days.map((day) => (
-            <TabsContent key={day.id} value={day.id} className="mt-0">
+            <TabsContent key={day.id} value={day.id} className="mt-0 flex-1 overflow-y-auto">
               {filteredSchedule.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 pb-4">
                   {filteredSchedule.map((event) => (
                     <EventCard
                       key={event.id}
