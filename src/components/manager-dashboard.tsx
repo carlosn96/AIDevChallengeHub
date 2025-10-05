@@ -5,6 +5,13 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
@@ -22,6 +29,7 @@ export default function ManagerDashboard() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('teams');
 
   useEffect(() => {
     if (!db) {
@@ -90,53 +98,91 @@ export default function ManagerDashboard() {
     );
   }
 
+  const tabItems = [
+    { value: 'teams', label: 'Team Management', icon: Users },
+    { value: 'schedule', label: 'Schedule', icon: Calendar },
+    { value: 'projects', label: 'Projects', icon: FolderKanban },
+    { value: 'activities', label: 'Activities', icon: ListChecks },
+    { value: 'settings', label: 'Settings', icon: Settings },
+  ];
+
+  const activeTabItem = tabItems.find(item => item.value === activeTab);
+  const ActiveIcon = activeTabItem?.icon || Users;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Manager Dashboard
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm md:text-base text-muted-foreground">
           Oversee teams, schedule, and projects for the AIDevChallenge 2025.
         </p>
       </div>
 
-      <Tabs defaultValue="teams" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Mobile: Select Dropdown */}
+        <div className="md:hidden mb-4">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full h-12 text-base">
+              <div className="flex items-center gap-2">
+                <ActiveIcon className="h-5 w-5" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {tabItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SelectItem key={item.value} value={item.value} className="text-base py-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-5 w-5" />
+                      <span>{item.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop: Tabs */}
+        <TabsList className="hidden md:grid w-full grid-cols-5 h-12 mb-6">
           <TabsTrigger value="teams" className="h-full">
-            <Users className="mr-2" />
+            <Users className="mr-2 h-5 w-5" />
             Team Management
           </TabsTrigger>
           <TabsTrigger value="schedule" className="h-full">
-            <Calendar className="mr-2" />
+            <Calendar className="mr-2 h-5 w-5" />
             Schedule
           </TabsTrigger>
           <TabsTrigger value="projects" className="h-full">
-            <FolderKanban className="mr-2" />
+            <FolderKanban className="mr-2 h-5 w-5" />
             Projects
           </TabsTrigger>
           <TabsTrigger value="activities" className="h-full">
-            <ListChecks className="mr-2" />
+            <ListChecks className="mr-2 h-5 w-5" />
             Activities
           </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
-            <Settings className="mr-2" />
+            <Settings className="mr-2 h-5 w-5" />
             Settings
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="teams" className="mt-6">
+        
+        <TabsContent value="teams" className="mt-0">
             <TeamManagement teams={teams} users={users} projects={projects} activities={activities} />
         </TabsContent>
-        <TabsContent value="schedule" className="mt-6">
+        <TabsContent value="schedule" className="mt-0">
             <ScheduleManagement schedule={schedule} days={days} />
         </TabsContent>
-        <TabsContent value="projects" className="mt-6">
+        <TabsContent value="projects" className="mt-0">
             <ProjectManagement projects={projects} />
         </TabsContent>
-        <TabsContent value="activities" className="mt-6">
+        <TabsContent value="activities" className="mt-0">
             <ActivityManagement activities={activities} />
         </TabsContent>
-        <TabsContent value="settings" className="mt-6">
+        <TabsContent value="settings" className="mt-0">
             <SettingsManagement settings={loginSettings} />
         </TabsContent>
       </Tabs>
