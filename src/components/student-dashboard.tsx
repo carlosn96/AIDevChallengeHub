@@ -103,24 +103,24 @@ export default function StudentDashboard() {
 
   if (isAuthLoading || isDataLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
           <div>
-            <h1 className="text-xl font-bold">
+            <h1 className="text-lg md:text-xl font-bold">
               Loading your dashboard...
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs md:text-sm">
                 Please wait while we get everything ready.
             </p>
           </div>
         </div>
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
-            <Skeleton className="h-[400px] w-full rounded-2xl" />
+            <Skeleton className="h-[400px] w-full rounded-xl md:rounded-2xl" />
           </div>
           <div className="lg:col-span-8 xl:col-span-9">
-            <Skeleton className="h-[600px] w-full rounded-2xl" />
+            <Skeleton className="h-[600px] w-full rounded-xl md:rounded-2xl" />
           </div>
         </div>
       </div>
@@ -129,33 +129,33 @@ export default function StudentDashboard() {
 
   if (userProfile && !myTeam) {
     return (
-      <div className="space-y-6">
-        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
+      <div className="space-y-4 md:space-y-6">
+        <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           <div className="relative">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1 md:mb-2">
                   Welcome, {userProfile.displayName || 'Student'}
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   Get ready for the AIDevChallenge 2025
                 </p>
               </div>
-              <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+              <Sparkles className="h-6 w-6 md:h-8 md:w-8 text-primary animate-pulse" />
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4 xl:col-span-3">
             <Card className="border-dashed border-2 border-muted-foreground/25">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <Users className="h-8 w-8 text-primary" />
+                <div className="mx-auto mb-4 flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Users className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                 </div>
-                <CardTitle className="text-xl">Team Pending</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg md:text-xl">Team Pending</CardTitle>
+                <CardDescription className="text-xs md:text-sm">
                   You are being assigned to a team. This should only take a moment.
                 </CardDescription>
               </CardHeader>
@@ -175,34 +175,36 @@ export default function StudentDashboard() {
 
   // Full dashboard with team
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
+    <div className="space-y-4 md:space-y-6">
+      <div className="relative overflow-hidden rounded-xl md:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 md:p-6">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
         <div className="relative">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-                {myTeam?.name || 'Your Team'}
-              </h1>
-              <p className="text-muted-foreground">
-                Welcome back, {userProfile?.displayName}
-              </p>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
-                <Users className="h-4 w-4 text-primary" />
-                <div className="text-left">
-                  <p className="text-xs text-muted-foreground">Members</p>
-                  <p className="text-sm font-semibold">{teamMembers.length}</p>
-                </div>
+          <div className="flex flex-col gap-3 md:gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1 md:mb-2 truncate">
+                  {myTeam?.name || 'Your Team'}
+                </h1>
+                <p className="text-sm md:text-base text-muted-foreground truncate">
+                  Welcome back, {userProfile?.displayName}
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
-                <Calendar className="h-4 w-4 text-accent" />
-                <div className="text-left">
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <p className="text-sm font-semibold text-green-500">Active</p>
+              <div className="flex gap-2 md:gap-3 shrink-0">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                  <Users className="h-4 w-4 text-primary shrink-0" />
+                  <div className="text-left">
+                    <p className="text-xs text-muted-foreground leading-none">Members</p>
+                    <p className="text-sm font-semibold leading-none mt-1">{teamMembers.length}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50">
+                  <Calendar className="h-4 w-4 text-accent shrink-0" />
+                  <div className="text-left">
+                    <p className="text-xs text-muted-foreground leading-none">Status</p>
+                    <p className="text-sm font-semibold text-green-500 leading-none mt-1">Active</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -210,9 +212,9 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
         <div className="lg:col-span-4 xl:col-span-3">
-          <div className="sticky top-20">
+          <div className="lg:sticky lg:top-4">
             {myTeam && <TeamCard
               team={myTeam}
               members={teamMembers}
