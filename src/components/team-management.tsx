@@ -177,7 +177,7 @@ export default function TeamManagement({ teams, users, projects, activities }: T
                   <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                  <CardTitle>Teams</CardTitle>
+                  <CardTitle>Team Management</CardTitle>
                   <CardDescription>View and manage all participant teams.</CardDescription>
               </div>
               </div>
