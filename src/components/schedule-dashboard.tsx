@@ -306,7 +306,7 @@ export default function ScheduleDashboard() {
 
       <CardContent className="pt-6">
       <Tabs value={activeDayId || ''} onValueChange={setActiveDayId} className="w-full">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <TabsList className="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-3 h-auto sm:h-11">
               {days.map((day) => (
                 <TabsTrigger
