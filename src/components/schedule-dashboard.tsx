@@ -199,6 +199,8 @@ export default function ScheduleDashboard() {
       setLiveState({ liveIds: newLiveIds, upcomingIds: newUpcomingIds });
     };
 
+    // Run once on mount and then set an interval.
+    // This ensures the logic only runs on the client, avoiding hydration errors.
     updateLiveStatus();
     const interval = setInterval(updateLiveStatus, 60000);
 
