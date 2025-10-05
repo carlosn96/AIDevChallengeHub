@@ -199,7 +199,7 @@ export default function TeamCard({ team, members, currentUserId, project }: Team
                                   <div>
                                     <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                                       <Target className="h-3 w-3" />
-                                      ODS Impactados
+                                      Impacted ODS
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
                                       {project.ods.map(odsNum => (

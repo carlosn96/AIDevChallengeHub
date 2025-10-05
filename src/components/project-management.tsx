@@ -73,22 +73,22 @@ type ProjectManagementProps = {
 };
 
 const projectSchema = z.object({
-  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
-  description: z.string().min(10, 'La descripción debe tener al menos 10 caracteres.'),
+  name: z.string().min(3, 'Name must be at least 3 characters.'),
+  description: z.string().min(10, 'Description must be at least 10 characters.'),
   ods: z.string().optional().transform((val, ctx) => {
     if (!val || val.trim() === '') return [];
     const numbers = val.split(',').map(item => item.trim()).filter(Boolean).map(Number);
     if (numbers.some(isNaN)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Todos los ODS deben ser números válidos."
+        message: "All ODS must be valid numbers."
       });
       return z.NEVER;
     }
     if (numbers.some(n => n < 1 || n > 17)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Los números de ODS deben estar entre 1 y 17."
+        message: "ODS numbers must be between 1 and 17."
       });
       return z.NEVER;
     }
@@ -133,8 +133,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     try {
       await createProject(values);
       toast({
-        title: 'Proyecto Creado',
-        description: `"${values.name}" ha sido creado exitosamente.`,
+        title: 'Project Created',
+        description: `"${values.name}" has been created successfully.`,
       });
       createForm.reset();
       setIsCreateDialogOpen(false);
@@ -142,8 +142,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
       console.error('Failed to create project:', error);
       toast({
         variant: 'destructive',
-        title: 'Error al Crear',
-        description: 'Hubo un error al crear el proyecto. Intenta nuevamente.',
+        title: 'Creation Failed',
+        description: 'There was an error creating the project. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -157,8 +157,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     try {
       await updateProject(editingProject.id, values);
       toast({
-        title: 'Proyecto Actualizado',
-        description: `"${values.name}" ha sido actualizado exitosamente.`,
+        title: 'Project Updated',
+        description: `"${values.name}" has been updated successfully.`,
       });
       setIsEditDialogOpen(false);
       setEditingProject(null);
@@ -166,8 +166,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
       console.error('Failed to update project:', error);
       toast({
         variant: 'destructive',
-        title: 'Error al Actualizar',
-        description: 'Hubo un error al actualizar el proyecto. Intenta nuevamente.',
+        title: 'Update Failed',
+        description: 'There was an error updating the project. Please try again.',
       });
     } finally {
       setIsUpdating(false);
@@ -179,15 +179,15 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     try {
       await deleteProject(projectId);
       toast({
-        title: 'Proyecto Eliminado',
-        description: 'El proyecto ha sido eliminado exitosamente.',
+        title: 'Project Deleted',
+        description: 'The project has been deleted successfully.',
       });
     } catch (error) {
       console.error('Failed to delete project:', error);
       toast({
         variant: 'destructive',
-        title: 'Error al Eliminar',
-        description: 'Hubo un error al eliminar el proyecto. Intenta nuevamente.',
+        title: 'Deletion Failed',
+        description: 'There was an error deleting the project. Please try again.',
       });
     } finally {
       setIsDeleting(false);
@@ -199,9 +199,9 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
       {/* Header with Create Button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Proyectos</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Projects</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            {projects.length} {projects.length === 1 ? 'proyecto disponible' : 'proyectos disponibles'}
+            {projects.length} {projects.length === 1 ? 'project available' : 'projects available'}
           </p>
         </div>
         <Button 
@@ -209,7 +209,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
           className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
         >
           <PlusCircle className="h-4 w-4 mr-2" />
-          Nuevo Proyecto
+          New Project
         </Button>
       </div>
 
@@ -221,10 +221,10 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
               <Package className="h-10 w-10 text-muted-foreground" />
             </div>
             <p className="text-lg font-medium text-foreground mb-2">
-              No hay proyectos aún
+              No projects yet
             </p>
             <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-              Crea tu primer proyecto para comenzar a asignar desafíos a los equipos
+              Create your first project to start assigning challenges to teams.
             </p>
             <Button 
               onClick={() => setIsCreateDialogOpen(true)}
@@ -232,7 +232,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
               className="border-primary/50 hover:bg-primary/10"
             >
               <PlusCircle className="h-4 w-4 mr-2" />
-              Crear Primer Proyecto
+              Create First Project
             </Button>
           </CardContent>
         </Card>
@@ -271,7 +271,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditClick(project)}>
                           <Pencil className="h-4 w-4 mr-2" />
-                          Editar
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <AlertDialog>
@@ -281,7 +281,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                               className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Eliminar
+                              Delete
                             </DropdownMenuItem>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
@@ -290,16 +290,16 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                                 <div className="p-2 rounded-full bg-destructive/10">
                                   <AlertCircle className="h-5 w-5 text-destructive" />
                                 </div>
-                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               </div>
                               <AlertDialogDescription>
-                                Esto eliminará permanentemente el proyecto <strong>"{project.name}"</strong> y 
-                                lo desasignará de todos los equipos. Esta acción no se puede deshacer.
+                                This will permanently delete the project <strong>"{project.name}"</strong> and 
+                                unassign it from all teams. This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel disabled={isDeleting}>
-                                Cancelar
+                                Cancel
                               </AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDelete(project.id)}
@@ -307,7 +307,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                                 className="bg-destructive hover:bg-destructive/90"
                               >
                                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                                {isDeleting ? 'Deleting...' : 'Delete'}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -326,7 +326,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                     <div className="mt-4">
                       <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
                         <Target className="h-3 w-3" />
-                        ODS Impactados
+                        Impacted ODS
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {project.ods.map(odsNum => (
@@ -364,9 +364,9 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 <PlusCircle className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <DialogTitle>Crear Nuevo Proyecto</DialogTitle>
+                <DialogTitle>Create New Project</DialogTitle>
                 <DialogDescription>
-                  Agrega un proyecto para asignar a los equipos
+                  Add a new project to assign to teams.
                 </DialogDescription>
               </div>
             </div>
@@ -378,10 +378,10 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Nombre del Proyecto</FormLabel>
+                    <FormLabel className="text-sm font-medium">Project Name</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="ej: Sistema de IA para Diagnóstico" 
+                        placeholder="e.g., AI Diagnostic System" 
                         {...field}
                         className="h-10"
                       />
@@ -395,10 +395,10 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Descripción</FormLabel>
+                    <FormLabel className="text-sm font-medium">Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe los objetivos y requisitos del proyecto..."
+                        placeholder="Describe the project's goals and requirements..."
                         {...field}
                         rows={5}
                         className="resize-none"
@@ -413,16 +413,16 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="ods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">ODS Impactados</FormLabel>
+                    <FormLabel className="text-sm font-medium">Impacted ODS</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="ej: 3, 10, 17" 
+                        placeholder="e.g., 3, 10, 17" 
                         {...field}
                         className="h-10"
                       />
                     </FormControl>
                     <FormDescription>
-                      Introduce los números de los ODS separados por comas.
+                      Enter the ODS numbers separated by commas.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -431,7 +431,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={isSubmitting}>
-                    Cancelar
+                    Cancel
                   </Button>
                 </DialogClose>
                 <Button 
@@ -440,7 +440,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
                 >
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSubmitting ? 'Creando...' : 'Crear Proyecto'}
+                  {isSubmitting ? 'Creating...' : 'Create Project'}
                 </Button>
               </DialogFooter>
             </form>
@@ -457,9 +457,9 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 <Pencil className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <DialogTitle>Editar Proyecto</DialogTitle>
+                <DialogTitle>Edit Project</DialogTitle>
                 <DialogDescription>
-                  Actualiza los detalles de "{editingProject?.name}"
+                  Update the details for "{editingProject?.name}"
                 </DialogDescription>
               </div>
             </div>
@@ -471,7 +471,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Nombre del Proyecto</FormLabel>
+                    <FormLabel className="text-sm font-medium">Project Name</FormLabel>
                     <FormControl>
                       <Input {...field} className="h-10" />
                     </FormControl>
@@ -484,7 +484,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Descripción</FormLabel>
+                    <FormLabel className="text-sm font-medium">Description</FormLabel>
                     <FormControl>
                       <Textarea {...field} rows={5} className="resize-none" />
                     </FormControl>
@@ -497,16 +497,16 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                 name="ods"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">ODS Impactados</FormLabel>
+                    <FormLabel className="text-sm font-medium">Impacted ODS</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="ej: 3, 10, 17" 
+                        placeholder="e.g., 3, 10, 17" 
                         {...field}
                         className="h-10"
                       />
                     </FormControl>
                     <FormDescription>
-                      Introduce los números de los ODS separados por comas.
+                      Enter the ODS numbers separated by commas.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -515,7 +515,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={isUpdating}>
-                    Cancelar
+                    Cancel
                   </Button>
                 </DialogClose>
                 <Button 
@@ -524,7 +524,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
                 >
                   {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isUpdating ? 'Guardando...' : 'Guardar Cambios'}
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>

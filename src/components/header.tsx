@@ -145,17 +145,17 @@ export default function Header() {
                   {/* <DropdownMenuGroup>
                     <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Perfil</span>
+                      <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Configuración</span>
+                      <span>Settings</span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
                     <LifeBuoy className="mr-2 h-4 w-4" />
-                    <span>Soporte</span>
+                    <span>Support</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator /> */}
                   <DropdownMenuItem 
@@ -163,7 +163,7 @@ export default function Header() {
                     className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Cerrar Sesión</span>
+                    <span>Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
