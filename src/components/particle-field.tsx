@@ -1,42 +1,53 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const Particle = ({ style }: { style: React.CSSProperties }) => (
-  <div
-    className="absolute rounded-full bg-accent"
-    style={style}
-  />
-);
+const ParticleField = () => {
+  const [particles, setParticles] = useState<
+    { id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number }[]
+  >([]);
+  const [isMounted, setIsMounted] = useState(false);
 
-export default function ParticleField() {
-  const particles = useMemo(() => {
-    const particleList = [];
-    const particleCount = 50;
-    for (let i = 0; i < particleCount; i++) {
-      const size = Math.random() * 3 + 1;
-      const duration = Math.random() * 20 + 20; // Slower: 20s to 40s
-      const delay = Math.random() * -40; // Stagger start times
-      const startX = Math.random() * 100;
-      const endX = (Math.random() - 0.5) * 40; // Reduce horizontal drift
+  useEffect(() => {
+    // This effect runs only on the client, after the component has mounted.
+    setIsMounted(true);
+    const newParticles = Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 3 + 1,
+      speed: Math.random() * 15 + 10,
+      delay: Math.random() * 5,
+      xEnd: Math.random() * 20 - 10,
+    }));
+    setParticles(newParticles);
+  }, []); // The empty dependency array ensures this runs only once.
 
-      particleList.push(
-        <Particle
-          key={i}
-          style={{
-            width: `${size}px`,
-            height: `${size}px`,
-            left: `${startX}vw`,
-            bottom: `-${size}px`,
-            animation: `float ${duration}s linear ${delay}s infinite`,
-            opacity: Math.random() * 0.5 + 0.1,
-            '--x-end': endX,
-          } as React.CSSProperties}
+  if (!isMounted) {
+    // Render nothing on the server and on the initial client render.
+    return null;
+  }
+
+  return (
+    <>
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="particle"
+          style={
+            {
+              left: `${p.x}%`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              animationDuration: `${p.speed}s`,
+              animationDelay: `${p.delay}s`,
+              '--x-end': `${p.xEnd}vw`,
+            } as React.CSSProperties
+          }
         />
-      );
-    }
-    return particleList;
-  }, []);
+      ))}
+    </>
+  );
+};
 
-  return <div className="particle-field">{particles}</div>;
-}
+export default ParticleField;

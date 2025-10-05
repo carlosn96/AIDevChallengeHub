@@ -6,6 +6,7 @@ import { Sparkles, Bot, Trophy, AlertCircle, Rocket } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSettings } from '@/context/settings-context';
+import ParticleField from '@/components/particle-field';
 
 
 const Logo = () => (
@@ -28,24 +29,6 @@ export default function LoginPage() {
   
   const router = useRouter();
 
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    // Generate particles only on the client-side to prevent hydration mismatch
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 3 + 1,
-    speed: Math.random() * 15 + 10,
-    delay: Math.random() * 5,
-    xEnd: Math.random() * 20 - 10
-    }));
-    setParticles(newParticles);
-  }, []);
-
   useEffect(() => {
     if (!isLoading && user) {
       router.push('/dashboard');
@@ -59,20 +42,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
       <div className="absolute inset-0 grid-bg" />
 
-      {isMounted && particles.map((p) => (
-        <div
-          key={p.id}
-          className="particle"
-          style={{
-            left: `${p.x}%`,
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            animationDuration: `${p.speed}s`,
-            animationDelay: `${p.delay}s`,
-            '--x-end': `${p.xEnd}vw`
-          } as React.CSSProperties}
-        />
-      ))}
+      <ParticleField />
 
       <div className="scan-line" />
 
