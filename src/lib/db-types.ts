@@ -23,6 +23,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  ods?: number[];
   createdAt: Timestamp;
 };
 

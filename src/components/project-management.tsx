@@ -19,6 +19,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Dialog,
@@ -55,6 +56,7 @@ import {
   Package,
   Calendar,
   MoreVertical,
+  Target
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -64,6 +66,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from './ui/badge';
 
 type ProjectManagementProps = {
   projects: Project[];
@@ -72,6 +75,25 @@ type ProjectManagementProps = {
 const projectSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   description: z.string().min(10, 'La descripción debe tener al menos 10 caracteres.'),
+  ods: z.string().optional().transform((val, ctx) => {
+    if (!val || val.trim() === '') return [];
+    const numbers = val.split(',').map(item => item.trim()).filter(Boolean).map(Number);
+    if (numbers.some(isNaN)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Todos los ODS deben ser números válidos."
+      });
+      return z.NEVER;
+    }
+    if (numbers.some(n => n < 1 || n > 17)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Los números de ODS deben estar entre 1 y 17."
+      });
+      return z.NEVER;
+    }
+    return [...new Set(numbers)]; // Remove duplicates
+  }),
 });
 
 export default function ProjectManagement({ projects }: ProjectManagementProps) {
@@ -88,6 +110,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     defaultValues: {
       name: '',
       description: '',
+      ods: '',
     },
   });
 
@@ -100,6 +123,7 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     editForm.reset({
       name: project.name,
       description: project.description,
+      ods: project.ods?.join(', ') || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -217,88 +241,106 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
           {projects.map((project) => (
             <Card 
               key={project.id} 
-              className="group relative overflow-hidden transition-all hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50"
+              className="group flex flex-col justify-between relative overflow-hidden transition-all hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50"
             >
               {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               
-              <CardHeader className="relative pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 flex-shrink-0">
-                      <Package className="h-4 w-4 text-primary" />
+              <div>
+                <CardHeader className="relative pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 flex-shrink-0">
+                        <Package className="h-4 w-4 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
+                        {project.name}
+                      </CardTitle>
                     </div>
-                    <CardTitle className="text-lg truncate group-hover:text-primary transition-colors">
-                      {project.name}
-                    </CardTitle>
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditClick(project)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem 
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 rounded-full bg-destructive/10">
-                                <AlertCircle className="h-5 w-5 text-destructive" />
-                              </div>
-                              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                            </div>
-                            <AlertDialogDescription>
-                              Esto eliminará permanentemente el proyecto <strong>"{project.name}"</strong> y 
-                              lo desasignará de todos los equipos. Esta acción no se puede deshacer.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel disabled={isDeleting}>
-                              Cancelar
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(project.id)}
-                              disabled={isDeleting}
-                              className="bg-destructive hover:bg-destructive/90"
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditClick(project)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem 
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-destructive focus:text-destructive"
                             >
-                              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              {isDeleting ? 'Eliminando...' : 'Eliminar'}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 rounded-full bg-destructive/10">
+                                  <AlertCircle className="h-5 w-5 text-destructive" />
+                                </div>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                              </div>
+                              <AlertDialogDescription>
+                                Esto eliminará permanentemente el proyecto <strong>"{project.name}"</strong> y 
+                                lo desasignará de todos los equipos. Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isDeleting}>
+                                Cancelar
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(project.id)}
+                                disabled={isDeleting}
+                                className="bg-destructive hover:bg-destructive/90"
+                              >
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="relative">
+                  <CardDescription className="line-clamp-3 text-sm leading-relaxed">
+                    {project.description}
+                  </CardDescription>
+
+                  {project.ods && project.ods.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                        <Target className="h-3 w-3" />
+                        ODS Impactados
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {project.ods.map(odsNum => (
+                          <Badge key={odsNum} variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                            ODS {odsNum}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </div>
               
-              <CardContent className="relative">
-                <CardDescription className="line-clamp-3 text-sm leading-relaxed">
-                  {project.description}
-                </CardDescription>
-              </CardContent>
-              
-              <CardFooter className="relative pt-0">
+              <CardFooter className="relative pt-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
                   <span>
@@ -366,6 +408,26 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                   </FormItem>
                 )}
               />
+              <FormField
+                control={createForm.control}
+                name="ods"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">ODS Impactados</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="ej: 3, 10, 17" 
+                        {...field}
+                        className="h-10"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Introduce los números de los ODS separados por comas.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={isSubmitting}>
@@ -426,6 +488,26 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
                     <FormControl>
                       <Textarea {...field} rows={5} className="resize-none" />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="ods"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">ODS Impactados</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="ej: 3, 10, 17" 
+                        {...field}
+                        className="h-10"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Introduce los números de los ODS separados por comas.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
