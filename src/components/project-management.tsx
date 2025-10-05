@@ -72,29 +72,19 @@ type ProjectManagementProps = {
   projects: Project[];
 };
 
-const projectSchema = z.object({
+const projectFormSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
-  ods: z.string().optional().transform((val, ctx) => {
-    if (!val || val.trim() === '') return [];
-    const numbers = val.split(',').map(item => item.trim()).filter(Boolean).map(Number);
-    if (numbers.some(isNaN)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "All SDGs must be valid numbers."
-      });
-      return z.NEVER;
-    }
-    if (numbers.some(n => n < 1 || n > 17)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "SDG numbers must be between 1 and 17."
-      });
-      return z.NEVER;
-    }
-    return [...new Set(numbers)]; // Remove duplicates
-  }),
+  ods: z.string().optional(),
 });
+
+const projectSubmitSchema = projectFormSchema.extend({
+  ods: z.preprocess((val) => {
+    if (typeof val !== 'string' || !val.trim()) return [];
+    return val.split(',').map(item => item.trim()).filter(Boolean).map(Number);
+  }, z.array(z.number().int().min(1).max(17, "SDG numbers must be between 1 and 17.")).optional()),
+});
+
 
 export default function ProjectManagement({ projects }: ProjectManagementProps) {
   const { toast } = useToast();
@@ -105,8 +95,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  const createForm = useForm<z.infer<typeof projectSchema>>({
-    resolver: zodResolver(projectSchema),
+  const createForm = useForm<z.infer<typeof projectFormSchema>>({
+    resolver: zodResolver(projectFormSchema),
     defaultValues: {
       name: '',
       description: '',
@@ -114,8 +104,8 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     },
   });
 
-  const editForm = useForm<z.infer<typeof projectSchema>>({
-    resolver: zodResolver(projectSchema),
+  const editForm = useForm<z.infer<typeof projectFormSchema>>({
+    resolver: zodResolver(projectFormSchema),
   });
 
   const handleEditClick = (project: Project) => {
@@ -128,10 +118,18 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     setIsEditDialogOpen(true);
   };
   
-  const handleCreateSubmit = async (values: z.infer<typeof projectSchema>) => {
+  const handleCreateSubmit = async (values: z.infer<typeof projectFormSchema>) => {
+    const parsed = projectSubmitSchema.safeParse(values);
+    if (!parsed.success) {
+      parsed.error.errors.forEach(err => {
+        createForm.setError(err.path[0] as keyof typeof values, { message: err.message });
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      await createProject(values);
+      await createProject(parsed.data);
       toast({
         title: 'Project Created',
         description: `"${values.name}" has been created successfully.`,
@@ -150,12 +148,20 @@ export default function ProjectManagement({ projects }: ProjectManagementProps) 
     }
   };
 
-  const handleUpdateSubmit = async (values: z.infer<typeof projectSchema>) => {
+  const handleUpdateSubmit = async (values: z.infer<typeof projectFormSchema>) => {
     if (!editingProject) return;
+
+    const parsed = projectSubmitSchema.safeParse(values);
+    if (!parsed.success) {
+      parsed.error.errors.forEach(err => {
+        editForm.setError(err.path[0] as keyof typeof values, { message: err.message });
+      });
+      return;
+    }
 
     setIsUpdating(true);
     try {
-      await updateProject(editingProject.id, values);
+      await updateProject(editingProject.id, parsed.data);
       toast({
         title: 'Project Updated',
         description: `"${values.name}" has been updated successfully.`,
