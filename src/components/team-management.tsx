@@ -248,7 +248,7 @@ export default function TeamManagement({ teams, users, projects, activities }: T
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button variant="outline" size="sm" onClick={() => { 
                         setSelectedTeam(team);
-                        setTimeout(() => setIsActivityDialogOpen(true), 0);
+                        setIsActivityDialogOpen(true);
                       }}>
                         <ListChecks className="mr-2 h-4 w-4" />
                         Activities

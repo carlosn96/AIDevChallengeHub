@@ -452,39 +452,51 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
 };
 
 // Activity Actions
-export const createActivity = async (activity: Omit<Activity, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
-  if (!db) throw new Error("Firestore is not initialized.");
-  const collectionRef = collection(db, 'activities');
-  const newDocRef = await addDoc(collectionRef, {
-    ...activity,
+export async function createActivity(data: { title: string; description?: string }) {
+  if (!db) throw new Error('Firebase not initialized');
+  
+  const activityRef = collection(db, 'activities');
+  const newActivity = {
+    title: data.title,
+    description: data.description || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  };
+  
+  const docRef = await addDoc(activityRef, newActivity);
+  return docRef.id;
+}
+
+export async function updateActivity(
+  activityId: string, 
+  data: { title: string; description?: string }
+) {
+  if (!db) throw new Error('Firebase not initialized');
+  
+  const activityRef = doc(db, 'activities', activityId);
+  await updateDoc(activityRef, {
+    title: data.title,
+    description: data.description || '',
+    updatedAt: serverTimestamp(),
   });
-  return newDocRef.id;
-};
+}
 
-export const updateActivity = async (activityId: string, data: Partial<Omit<Activity, 'id'>>) => {
-    if (!db) throw new Error("Firestore is not initialized.");
-    await updateDoc(doc(db, 'activities', activityId), {
-      ...data,
-      updatedAt: serverTimestamp(),
-    });
-};
+export async function deleteActivity(activityId: string) {
+  if (!db) throw new Error('Firebase not initialized');
+  
+  const activityRef = doc(db, 'activities', activityId);
+  await deleteDoc(activityRef);
+}
 
-export const deleteActivity = async (activityId: string) => {
-  if (!db) throw new Error("Firestore is not initialized.");
-  await deleteDoc(doc(db, 'activities', activityId));
-};
-
-export const assignActivitiesToTeam = async (teamId: string, activityIds: string[]) => {
-  if (!db) throw new Error("Firebase not initialized");
+export async function assignActivitiesToTeam(teamId: string, activityIds: string[]) {
+  if (!db) throw new Error('Firebase not initialized');
   
   const teamRef = doc(db, 'teams', teamId);
   await updateDoc(teamRef, {
     activityIds: activityIds,
     updatedAt: serverTimestamp(),
   });
-};
+}
 
 
 // Settings Actions

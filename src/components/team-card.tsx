@@ -245,18 +245,12 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                            <DialogContent className="sm:max-w-lg">
                               <DialogHeader>
                                   <DialogTitle className="flex items-center gap-3">
-                                      {activityTypeIcons[activity.type] || <ListChecks className="h-5 w-5 text-primary" />}
+                                      <ListChecks className="h-5 w-5 text-primary" />
                                       {activity.title}
                                   </DialogTitle>
                               </DialogHeader>
                               <div className="py-4 text-sm text-muted-foreground space-y-4">
                                   <p>{activity.description}</p>
-                                  {activity.sdg && (
-                                    <div>
-                                      <h4 className="text-xs font-semibold text-foreground mb-2">Related SDG</h4>
-                                      <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20">SDG {activity.sdg}</Badge>
-                                    </div>
-                                  )}
                               </div>
                           </DialogContent>
                         </Dialog>

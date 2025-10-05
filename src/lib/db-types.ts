@@ -35,7 +35,7 @@ export type Activity = {
   title: string;
   description?: string;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
+  updatedAt?: Timestamp;
 };
 
 export type Day = {
