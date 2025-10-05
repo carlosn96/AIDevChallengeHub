@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -107,8 +106,8 @@ export default function TeamCard({ team, members, currentUserId, project, activi
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
+    <Card className="flex flex-col bg-transparent border-none shadow-none">
+      <CardHeader className="p-0 mb-4">
         <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-muted rounded-md">
@@ -151,9 +150,9 @@ export default function TeamCard({ team, members, currentUserId, project, activi
             )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-0 space-y-4">
         <p className="text-sm text-muted-foreground">Team members:</p>
-        <div className="min-h-[120px]">
+        <div className="h-[150px]">
           <ul className="space-y-3">
             {sortedMembers.map((member) => (
               <li key={member.uid} className="flex items-center gap-3">
@@ -181,13 +180,13 @@ export default function TeamCard({ team, members, currentUserId, project, activi
           </ul>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-4">
+      <CardFooter className="p-0 flex flex-col items-start gap-4 mt-4">
           <div className="w-full">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <FileCode className="h-4 w-4 text-primary" />
                   Assigned Project
               </h3>
-              <div className="min-h-[60px]">
+              <div className="h-[60px]">
                 {project ? (
                     <Dialog>
                         <DialogTrigger asChild>
@@ -237,9 +236,9 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                   <ListChecks className="h-4 w-4 text-primary" />
                   Assigned Activities
               </h3>
-              <div className="min-h-[128px]">
+              <div className="h-[128px]">
                 {activities.length > 0 ? (
-                    <ScrollArea className="h-32">
+                    <ScrollArea className="h-full">
                       <div className="space-y-2 pr-4">
                         {activities.map(activity => (
                           <Dialog key={activity.id}>
