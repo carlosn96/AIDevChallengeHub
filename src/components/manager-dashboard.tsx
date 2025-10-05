@@ -106,9 +106,6 @@ export default function ManagerDashboard() {
     { value: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const activeTabItem = tabItems.find(item => item.value === activeTab);
-  const ActiveIcon = activeTabItem?.icon || Users;
-
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       <div className="space-y-2">
@@ -125,10 +122,7 @@ export default function ManagerDashboard() {
         <div className="md:hidden mb-4">
           <Select value={activeTab} onValueChange={setActiveTab}>
             <SelectTrigger className="w-full h-12 text-base">
-              <div className="flex items-center gap-2">
-                <ActiveIcon className="h-5 w-5" />
-                <SelectValue />
-              </div>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {tabItems.map((item) => {
@@ -166,7 +160,6 @@ export default function ManagerDashboard() {
           </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
             <Settings className="mr-2 h-5 w-5" />
-            Settings
           </TabsTrigger>
         </TabsList>
         
