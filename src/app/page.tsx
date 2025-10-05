@@ -29,8 +29,10 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; speed: number; delay: number; xEnd: number; }[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Generate particles only on the client-side to prevent hydration mismatch
     const newParticles = Array.from({ length: 50 }, (_, i) => ({
     id: i,
@@ -57,7 +59,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[hsl(var(--background))] via-[#1a1a3e] to-[#2d1b69]">
       <div className="absolute inset-0 grid-bg" />
 
-      {particles.map((p) => (
+      {isMounted && particles.map((p) => (
         <div
           key={p.id}
           className="particle"
