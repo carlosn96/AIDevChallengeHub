@@ -11,36 +11,36 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile, deleteUserAccount } from '@/lib/user-actions';
-import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { updateUserProfile } from '@/lib/user-actions';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(3, 'Display name must be at least 3 characters.').max(50, 'Display name is too long.'),
 });
 
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
 export default function ProfilePage() {
   const { user, role } = useSettings();
   const { toast } = useToast();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
   
-  const form = useForm<z.infer<typeof profileFormSchema>>({
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       displayName: user?.displayName || '',
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof profileFormSchema>) => {
+  const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
     
     setIsSaving(true);
@@ -59,27 +59,6 @@ export default function ProfilePage() {
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    setIsDeleting(true);
-    try {
-      await deleteUserAccount(user.uid);
-      toast({
-        title: 'Account Deletion Initiated',
-        description: 'Your account is scheduled for deletion. You will be logged out.',
-      });
-      // The auth context will handle the user being signed out.
-    } catch (error) {
-      console.error('Account deletion error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Deletion Failed',
-        description: 'There was an error deleting your account. Please try again.',
-      });
-      setIsDeleting(false);
     }
   };
 
@@ -148,52 +127,6 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
       
-      {/* Danger Zone */}
-      <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="text-destructive flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Danger Zone
-          </CardTitle>
-          <CardDescription>
-            These actions are permanent and cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-destructive/30 p-4">
-            <div>
-              <h3 className="font-semibold">Delete Account</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Permanently delete your account and all associated data.
-              </p>
-            </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="mt-4 sm:mt-0">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete My Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your
-                    account and remove your data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isDeleting ? 'Deleting...' : 'Yes, delete my account'}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

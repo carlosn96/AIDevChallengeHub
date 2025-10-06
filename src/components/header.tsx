@@ -149,16 +149,7 @@ export default function Header() {
                             <span>Profile</span>
                         </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
                   </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
-                    <LifeBuoy className="mr-2 h-4 w-4" />
-                    <span>Support</span>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={onLogout}
