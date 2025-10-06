@@ -169,10 +169,6 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-              <FormItem>
-                <FormLabel>Email Address</FormLabel>
-                <Input value={user.email || 'No email associated'} readOnly disabled />
-              </FormItem>
 
               {role === 'Student' && (
                  <FormField
