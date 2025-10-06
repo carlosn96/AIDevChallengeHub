@@ -186,7 +186,7 @@ export default function ManagerDashboard() {
             <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} />
         </TabsContent>
         <TabsContent value="teams-crud" className="mt-0">
-          <TeamCrudManagement teams={teams} />
+          <TeamCrudManagement teams={teams} users={users} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-0">
             <ScheduleManagement schedule={schedule} days={days} />

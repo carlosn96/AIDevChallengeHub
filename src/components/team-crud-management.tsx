@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import {
   Form,
@@ -48,10 +49,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { type Team } from '@/lib/db-types';
+import { type Team, type UserProfile } from '@/lib/db-types';
 import { createTeam, updateTeam, deleteTeam } from '@/lib/user-actions';
 import { 
   Loader2, 
@@ -62,19 +64,21 @@ import {
   Briefcase,
   Search,
   Users,
+  UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 
 type TeamCrudManagementProps = {
   teams: Team[];
+  users: UserProfile[];
 };
 
 const teamFormSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters.'),
 });
 
-export default function TeamCrudManagement({ teams }: TeamCrudManagementProps) {
+export default function TeamCrudManagement({ teams, users }: TeamCrudManagementProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -90,6 +94,10 @@ export default function TeamCrudManagement({ teams }: TeamCrudManagementProps) {
   const filteredTeams = useMemo(() => {
     return teams.filter(team => team.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [teams, searchTerm]);
+  
+  const unassignedStudentsCount = useMemo(() => {
+    return users.filter(user => user.role === 'Student' && !user.teamId).length;
+  }, [users]);
 
   const handleCreateClick = () => {
     setEditingTeam(null);
@@ -249,6 +257,17 @@ export default function TeamCrudManagement({ teams }: TeamCrudManagementProps) {
             </Table>
           )}
         </CardContent>
+        {unassignedStudentsCount > 0 && (
+          <CardFooter>
+            <Alert variant="destructive">
+              <UserCheck className="h-4 w-4" />
+              <AlertTitle>Pending Assignments</AlertTitle>
+              <AlertDescription>
+                There are {unassignedStudentsCount} student(s) not yet assigned to a team. You can assign them in the "Team Assignments" tab.
+              </AlertDescription>
+            </Alert>
+          </CardFooter>
+        )}
       </Card>
 
       {/* Create/Edit Team Dialog */}
