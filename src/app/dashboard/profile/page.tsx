@@ -12,14 +12,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile } from '@/lib/user-actions';
+import { updateUserProfile, getGroups, getUserProfile } from '@/lib/user-actions';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { type Group } from '@/lib/db-types';
+import { Combobox } from '@/components/ui/combobox';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(3, 'Display name must be at least 3 characters.').max(50, 'Display name is too long.'),
+  groupId: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -29,48 +29,72 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [group, setGroup] = useState<Group | null>(null);
-
+  const [groups, setGroups] = useState<Group[]>([]);
+  
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  useEffect(() => {
-    const fetchGroup = async () => {
-      if (user?.uid) {
-        const userDocRef = doc(db!, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          if (userData.groupId) {
-            const groupDocRef = doc(db!, 'groups', userData.groupId);
-            const groupDocSnap = await getDoc(groupDocRef);
-            if (groupDocSnap.exists()) {
-              setGroup({ id: groupDocSnap.id, ...groupDocSnap.data() } as Group);
-            }
-          }
-        }
-      }
-    };
-    fetchGroup();
-  }, [user?.uid]);
-  
+  const groupOptions = [
+    { value: 'none', label: 'No group' },
+    ...groups.map(g => ({ value: g.id, label: g.name }))
+  ];
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       displayName: user?.displayName || '',
+      groupId: 'none',
     },
   });
 
+  useEffect(() => {
+    async function fetchData() {
+      if (user?.uid) {
+        // Fetch groups
+        const availableGroups = await getGroups();
+        setGroups(availableGroups);
+
+        // Fetch user profile to get current group
+        const userProfile = await getUserProfile(user.uid);
+        if (userProfile?.groupId) {
+          const currentGroup = availableGroups.find(g => g.id === userProfile.groupId);
+          if (currentGroup) {
+            setGroup(currentGroup);
+            form.setValue('groupId', currentGroup.id);
+          }
+        }
+      }
+    }
+    fetchData();
+  }, [user?.uid, form]);
+  
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
     
     setIsSaving(true);
     try {
-      await updateUserProfile(user.uid, values);
+      const dataToUpdate: Partial<ProfileFormValues> = {
+        displayName: values.displayName,
+      };
+
+      if (role === 'Student') {
+        dataToUpdate.groupId = values.groupId === 'none' ? undefined : values.groupId;
+      }
+
+      await updateUserProfile(user.uid, dataToUpdate);
+
+      // Update local state for group name if it changed
+      if (dataToUpdate.groupId) {
+        setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
+      } else if (dataToUpdate.groupId === undefined) {
+        setGroup(null);
+      }
+
       toast({
         title: 'Profile Updated',
-        description: 'Your display name has been successfully updated.',
+        description: 'Your profile has been successfully updated.',
       });
     } catch (error) {
       console.error('Profile update error:', error);
@@ -115,7 +139,7 @@ export default function ProfilePage() {
                 {role && (
                     <CardDescription>{role}</CardDescription>
                 )}
-                {group && (
+                {group && role === 'Student' && (
                   <>
                     <Separator orientation='vertical' className='h-5' />
                     <CardDescription>Group: {group.name}</CardDescription>
@@ -146,6 +170,30 @@ export default function ProfilePage() {
                 <FormLabel>Email Address</FormLabel>
                 <Input value={user.email || 'No email associated'} readOnly disabled />
               </FormItem>
+
+              {role === 'Student' && (
+                 <FormField
+                  control={form.control}
+                  name="groupId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Group</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          options={groupOptions}
+                          value={field.value || 'none'}
+                          onChange={field.onChange}
+                          placeholder="Select your group..."
+                          searchPlaceholder="Search groups..."
+                          notFoundMessage="No groups available."
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSaving ? 'Saving...' : 'Save Changes'}

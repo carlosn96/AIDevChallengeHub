@@ -15,6 +15,7 @@ import {
   deleteDoc,
   addDoc,
   Timestamp,
+  orderBy,
 } from 'firebase/firestore';
 import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
 import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group } from './db-types';
@@ -508,14 +509,21 @@ export const updateLoginSettings = async (settings: LoginSettings) => {
 
 
 // User Profile Actions
-export const updateUserProfile = async (uid: string, data: { displayName: string }) => {
+export const updateUserProfile = async (uid: string, data: { displayName?: string, groupId?: string }) => {
     if (!db) throw new Error("Firestore not initialized.");
 
     const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, {
-        displayName: data.displayName,
-        updatedAt: serverTimestamp(),
-    });
+    
+    const updateData: { [key: string]: any } = {
+      ...data,
+      updatedAt: serverTimestamp(),
+    };
+    
+    if (data.groupId === undefined) {
+      updateData.groupId = null;
+    }
+
+    await updateDoc(userDocRef, updateData);
 };
 
 export const deleteUserAccount = async (uid: string) => {
@@ -538,6 +546,14 @@ export const deleteUserAccount = async (uid: string) => {
 };
 
 // Group Actions
+export const getGroups = async (): Promise<Group[]> => {
+  if (!db) return [];
+  const groupsRef = collection(db, "groups");
+  const q = query(groupsRef, orderBy("name", "asc"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
+};
+
 export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
     if (!db) throw new Error("Firestore is not initialized.");
     const collectionRef = collection(db, 'groups');
@@ -587,3 +603,4 @@ export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updat
       updatedAt: serverTimestamp(),
     });
   };
+

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
-import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, assignGroupToUser } from '@/lib/user-actions';
+import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -73,16 +73,12 @@ export default function TeamManagement({ teams, users, projects, activities, gro
 
   const usersMap = useMemo(() => new Map(users.map(u => [u.uid, u])), [users]);
   const projectsMap = useMemo(() => new Map(projects.map(p => [p.id, p])), [projects]);
+  const groupsMap = useMemo(() => new Map(groups.map(g => [g.id, g])), [groups]);
 
   const projectOptions = useMemo(() => [
     { value: 'none', label: 'No project assigned' },
     ...projects.map(p => ({ value: p.id, label: p.name }))
   ], [projects]);
-
-  const groupOptions = useMemo(() => [
-    { value: 'none', label: 'No group assigned' },
-    ...groups.map(g => ({ value: g.id, label: g.name }))
-  ], [groups]);
 
   const handleProjectAssignment = async (teamId: string, projectId: string) => {
     try {
@@ -97,29 +93,6 @@ export default function TeamManagement({ teams, users, projects, activities, gro
         variant: 'destructive',
         title: 'Assignment Failed',
         description: 'There was an error assigning the project. Please try again.',
-      });
-    }
-  };
-
-  const handleGroupAssignment = async (userId: string, groupId: string) => {
-    try {
-      await assignGroupToUser(userId, groupId === 'none' ? null : groupId);
-      toast({
-        title: 'Group Assigned',
-        description: "The student's group has been updated.",
-      });
-      // This is a client-side update to reflect the change immediately.
-      const user = usersMap.get(userId);
-      if (user) {
-        user.groupId = groupId === 'none' ? undefined : groupId;
-        usersMap.set(userId, user);
-      }
-    } catch (error) {
-      console.error('Failed to assign group:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Assignment Failed',
-        description: 'There was an error assigning the group. Please try again.',
       });
     }
   };
@@ -454,20 +427,17 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                             <AvatarImage src={member.photoURL || ''} />
                             <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <span className="text-sm truncate">{member.displayName}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium truncate block">{member.displayName}</span>
+                            {member.groupId && groupsMap.has(member.groupId) && (
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  <GroupIcon className="mr-1.5 h-3 w-3" />
+                                  {groupsMap.get(member.groupId)?.name}
+                                </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <div className="flex-1 w-full sm:w-48">
-                                <Combobox
-                                    options={groupOptions}
-                                    value={member.groupId || 'none'}
-                                    onChange={(value) => handleGroupAssignment(member.uid, value)}
-                                    placeholder='Assign group...'
-                                    searchPlaceholder='Search group...'
-                                    notFoundMessage='No group found.'
-                                    className="h-9 text-xs"
-                                />
-                            </div>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button 
