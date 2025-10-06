@@ -45,7 +45,7 @@ export default function ProfilePage() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      displayName: user?.displayName || '',
+      displayName: '',
       groupId: 'none',
     },
   });
@@ -53,49 +53,52 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchData() {
       if (user?.uid) {
-        // Fetch groups
         const availableGroups = await getGroups();
         setGroups(availableGroups);
 
-        // Fetch user profile to get current group
         const userProfile = await getUserProfile(user.uid);
-        if (userProfile?.groupId) {
-          const currentGroup = availableGroups.find(g => g.id === userProfile.groupId);
-          if (currentGroup) {
-            setGroup(currentGroup);
-            form.setValue('groupId', currentGroup.id);
+        if (userProfile) {
+          const currentName = userProfile.displayName || user.displayName || '';
+          const currentGroupId = userProfile.groupId || 'none';
+
+          setLocalDisplayName(currentName);
+          form.reset({
+            displayName: currentName,
+            groupId: currentGroupId,
+          });
+
+          if (currentGroupId !== 'none') {
+            const currentGroup = availableGroups.find(g => g.id === currentGroupId);
+            setGroup(currentGroup || null);
+          } else {
+            setGroup(null);
           }
-        }
-        if (userProfile?.displayName) {
-          setLocalDisplayName(userProfile.displayName);
-          form.setValue('displayName', userProfile.displayName);
         }
       }
     }
     fetchData();
-  }, [user?.uid, form]);
+  }, [user?.uid, user?.displayName, form]);
   
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
     
     setIsSaving(true);
     try {
-      const dataToUpdate: { displayName?: string; groupId?: string | null } = {
+      const dataToUpdate: { displayName: string; groupId?: string | null } = {
         displayName: values.displayName,
       };
 
       if (role === 'Student') {
-        dataToUpdate.groupId = values.groupId === 'none' ? undefined : values.groupId;
+        dataToUpdate.groupId = values.groupId === 'none' ? null : values.groupId;
       }
 
       await updateUserProfile(user.uid, dataToUpdate);
 
-      // Optimistically update local state
       setLocalDisplayName(values.displayName);
       if (role === 'Student') {
         if (dataToUpdate.groupId) {
           setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
-        } else if (dataToUpdate.groupId === undefined) {
+        } else {
           setGroup(null);
         }
       }
