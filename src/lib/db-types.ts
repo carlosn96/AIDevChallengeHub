@@ -17,6 +17,7 @@ export type Team = {
   memberIds: string[];
   projectId?: string;
   activityIds?: string[];
+  deliverables?: { [activityId: string]: string };
   memberCount: number;
   createdAt: Timestamp;
   updatedAt?: Timestamp;

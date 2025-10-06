@@ -593,6 +593,16 @@ export async function assignActivitiesToTeam(teamId: string, activityIds: string
   });
 }
 
+export async function submitDeliverable(teamId: string, activityId: string, url: string) {
+  if (!db) throw new Error('Firebase not initialized');
+
+  const teamRef = doc(db, 'teams', teamId);
+  await updateDoc(teamRef, {
+    [`deliverables.${activityId}`]: url,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 
 // Settings Actions
 export const updateLoginSettings = async (settings: LoginSettings) => {

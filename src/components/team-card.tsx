@@ -15,25 +15,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle, Target, ListChecks, FlaskConical, Mic, Star, Briefcase } from 'lucide-react';
-import { updateTeamName } from '@/lib/user-actions';
+import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle, Target, ListChecks, Briefcase, Link, Send } from 'lucide-react';
+import { updateTeamName, submitDeliverable } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from './ui/scroll-area';
-
-const activityTypeIcons: { [key: string]: React.ReactNode } = {
-  workshop: <FlaskConical className="h-4 w-4" />,
-  conference: <Mic className="h-4 w-4" />,
-  task: <Star className="h-4 w-4" />,
-};
 
 type TeamCardProps = {
   team: Team;
@@ -42,6 +35,92 @@ type TeamCardProps = {
   project: Project | null;
   activities: Activity[];
 };
+
+function DeliverableForm({ teamId, activity }: { teamId: string, activity: Activity & { deliverableUrl?: string } }) {
+  const [url, setUrl] = useState(activity.deliverableUrl || '');
+  const [isEditing, setIsEditing] = useState(!activity.deliverableUrl);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const handleEdit = () => setIsEditing(true);
+
+  const handleSubmit = async () => {
+    if (!url.trim()) {
+      toast({ variant: 'destructive', title: 'URL cannot be empty.' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await submitDeliverable(teamId, activity.id, url);
+      toast({ title: 'Deliverable Submitted', description: `URL for "${activity.title}" has been saved.` });
+      setIsEditing(false);
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Submission Failed' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="text-sm w-full bg-muted/50 border border-border/50 rounded-md px-3 py-2">
+      <Dialog>
+        <DialogTrigger asChild>
+          <div className="cursor-pointer hover:bg-muted transition-colors w-full text-left">
+            <p className="font-semibold truncate">{activity.title}</p>
+          </div>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <ListChecks className="h-5 w-5 text-primary" />
+              {activity.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground space-y-4">
+            {activity.description && <p>{activity.description}</p>}
+            {activity.product && (
+              <div className="mt-4">
+                <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Briefcase className="h-3 w-3" />
+                  Deliverable
+                </h4>
+                <p className="text-sm">{activity.product}</p>
+              </div>
+            )}
+            <Separator />
+            <h4 className="font-semibold text-foreground flex items-center gap-2">
+              <Link className="h-4 w-4" />
+              Submit Deliverable URL
+            </h4>
+            {!isEditing ? (
+              <div className="flex items-center gap-2">
+                <Input value={url} readOnly className="flex-1" />
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Pencil className="mr-2 h-3 w-3" /> Edit
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input 
+                  value={url} 
+                  onChange={(e) => setUrl(e.target.value)} 
+                  placeholder="https://example.com" 
+                  disabled={isSubmitting} 
+                />
+                <Button onClick={handleSubmit} disabled={isSubmitting} size="sm">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  <span className="ml-2 hidden sm:inline">Submit</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 
 export default function TeamCard({ team, members, currentUserId, project, activities }: TeamCardProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -100,6 +179,14 @@ export default function TeamCard({ team, members, currentUserId, project, activi
       setIsSaving(false);
     }
   };
+  
+  const activitiesWithDeliverables = useMemo(() => {
+    return activities.map(act => ({
+      ...act,
+      deliverableUrl: team.deliverables?.[act.id] || '',
+    }));
+  }, [activities, team.deliverables]);
+
 
   if (!team) {
     return null;
@@ -237,37 +324,11 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                   Assigned Activities
               </h3>
               <div className="h-[140px]">
-                {activities.length > 0 ? (
+                {activitiesWithDeliverables.length > 0 ? (
                     <ScrollArea className="h-full">
                       <div className="space-y-2 pr-4">
-                        {activities.map(activity => (
-                          <Dialog key={activity.id}>
-                            <DialogTrigger asChild>
-                                <div className="text-sm w-full bg-muted/50 border border-border/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
-                                    <p className="font-semibold truncate">{activity.title}</p>
-                                </div>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-lg">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-3">
-                                        <ListChecks className="h-5 w-5 text-primary" />
-                                        {activity.title}
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <div className="py-4 text-sm text-muted-foreground space-y-4">
-                                    <p>{activity.description}</p>
-                                    {activity.product && (
-                                      <div className="mt-4">
-                                        <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                                          <Briefcase className="h-3 w-3" />
-                                          Deliverable
-                                        </h4>
-                                        <p className="text-sm">{activity.product}</p>
-                                      </div>
-                                    )}
-                                </div>
-                            </DialogContent>
-                          </Dialog>
+                        {activitiesWithDeliverables.map(activity => (
+                          <DeliverableForm key={activity.id} teamId={team.id} activity={activity} />
                         ))}
                       </div>
                     </ScrollArea>

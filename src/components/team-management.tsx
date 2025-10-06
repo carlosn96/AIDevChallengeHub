@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
 import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon } from 'lucide-react';
+import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -399,8 +399,8 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                 </div>
               </DialogHeader>
               
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-                {/* Project Assignment - Mobile Friendly */}
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+                {/* Project Assignment */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Assigned Project</label>
                   <Combobox
@@ -429,20 +429,36 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                       Manage
                     </Button>
                   </div>
-                  {teamDetails.activityIds && teamDetails.activityIds.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {teamDetails.activityIds.map(actId => {
-                        const activity = activities.find(a => a.id === actId);
-                        return activity ? (
-                          <Badge key={actId} variant="secondary" className="text-xs">
-                            {activity.title}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">No activities assigned</p>
-                  )}
+                   <div className="p-2 border rounded-md">
+                    {teamDetails.activityIds && teamDetails.activityIds.length > 0 ? (
+                      <div className="space-y-2">
+                        {teamDetails.activityIds.map(actId => {
+                          const activity = activities.find(a => a.id === actId);
+                          if (!activity) return null;
+                          
+                          const hasDeliverable = !!teamDetails.deliverables?.[actId];
+                          return (
+                            <div key={actId} className="text-xs flex justify-between items-center">
+                              <span>{activity.title}</span>
+                              {hasDeliverable ? (
+                                <Badge variant="secondary" className="text-green-500 border-green-500/20 bg-green-500/10">
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  Submitted
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">
+                                  <Clock className="mr-1 h-3 w-3" />
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No activities assigned</p>
+                    )}
+                   </div>
                 </div>
 
                 <Separator />
