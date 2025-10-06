@@ -263,6 +263,58 @@ export const getActivitiesByIds = async (activityIds: string[]): Promise<Activit
 // --- Manager Actions ---
 
 /**
+ * Reassigns a user from one team to another.
+ * This is an atomic transaction.
+ * @param userId The ID of the user to reassign.
+ * @param oldTeamId The ID of the user's current team.
+ * @param newTeamId The ID of the new team, or null to unassign.
+ */
+export const reassignUserToTeam = async (
+  userId: string,
+  oldTeamId: string,
+  newTeamId: string | null
+) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  if (oldTeamId === newTeamId) return;
+
+  await runTransaction(db, async (transaction) => {
+    const userRef = doc(db, 'users', userId);
+    const oldTeamRef = doc(db, 'teams', oldTeamId);
+
+    // 1. Update the user's teamId
+    transaction.update(userRef, { teamId: newTeamId });
+
+    // 2. Remove user from the old team
+    const oldTeamDoc = await transaction.get(oldTeamRef);
+    if (oldTeamDoc.exists()) {
+      const oldTeamData = oldTeamDoc.data() as Team;
+      const updatedMemberIds = oldTeamData.memberIds.filter(id => id !== userId);
+      transaction.update(oldTeamRef, {
+        memberIds: updatedMemberIds,
+        memberCount: updatedMemberIds.length,
+      });
+    }
+
+    // 3. Add user to the new team (if a new team is provided)
+    if (newTeamId) {
+      const newTeamRef = doc(db, 'teams', newTeamId);
+      const newTeamDoc = await transaction.get(newTeamRef);
+      if (newTeamDoc.exists()) {
+        const newTeamData = newTeamDoc.data() as Team;
+        const updatedMemberIds = [...newTeamData.memberIds, userId];
+        transaction.update(newTeamRef, {
+          memberIds: updatedMemberIds,
+          memberCount: updatedMemberIds.length,
+        });
+      } else {
+        throw new Error(`New team with ID ${newTeamId} not found.`);
+      }
+    }
+  });
+};
+
+
+/**
  * Removes a user from their currently assigned team.
  * This function is non-destructive to the user account. It only updates the team and user documents.
  * @param teamId The ID of the team.
@@ -616,3 +668,5 @@ export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updat
       updatedAt: serverTimestamp(),
     });
   };
+
+    

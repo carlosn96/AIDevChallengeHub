@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
-import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam } from '@/lib/user-actions';
+import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -80,6 +80,12 @@ export default function TeamManagement({ teams, users, projects, activities, gro
     ...projects.map(p => ({ value: p.id, label: p.name }))
   ], [projects]);
 
+  const teamOptions = useMemo(() => [
+    { value: 'none', label: 'Unassign' },
+    ...teams.map(t => ({ value: t.id, label: t.name }))
+  ], [teams]);
+
+
   const handleProjectAssignment = async (teamId: string, projectId: string) => {
     try {
       await assignProjectToTeam(teamId, projectId === 'none' ? null : projectId);
@@ -96,6 +102,31 @@ export default function TeamManagement({ teams, users, projects, activities, gro
       });
     }
   };
+  
+  const handleReassignMember = async (userId: string, currentTeamId: string, newTeamId: string) => {
+    if (currentTeamId === newTeamId) return;
+    
+    setIsProcessing(true);
+    try {
+      await reassignUserToTeam(userId, currentTeamId, newTeamId === 'none' ? null : newTeamId);
+      toast({ title: 'Member Reassigned', description: 'The user has been moved to a new team.' });
+      
+      // Manually update local state for faster UI response
+      const updatedSelectedTeam = teams.find(t => t.id === selectedTeam?.id);
+      if (updatedSelectedTeam) {
+        setSelectedTeam(updatedSelectedTeam);
+      } else {
+        setSelectedTeam(null);
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to reassign member.' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   const handleRemoveMember = async (teamId: string, userId: string) => {
     setIsProcessing(true);
@@ -437,37 +468,16 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0" 
-                                  disabled={isProcessing}
-                                >
-                                  <UserX className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-xs md:text-sm">
-                                    This will remove the member from the team. They will be automatically re-assigned to another team if possible. This does not delete their account.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
-                                    onClick={() => handleRemoveMember(teamDetails.id, member.uid)}
-                                  >
-                                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                    Remove
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                        <div className="w-full sm:w-[200px]">
+                            <Combobox
+                                options={teamOptions.filter(opt => opt.value !== teamDetails.id)}
+                                value={teamDetails.id}
+                                onChange={(value) => handleReassignMember(member.uid, teamDetails.id, value)}
+                                placeholder="Reassign team..."
+                                searchPlaceholder="Search teams..."
+                                notFoundMessage="No team found."
+                                className="h-9 text-xs"
+                            />
                         </div>
                       </div>
                     ))}
@@ -588,3 +598,5 @@ export default function TeamManagement({ teams, users, projects, activities, gro
     </>
   );
 }
+
+    
