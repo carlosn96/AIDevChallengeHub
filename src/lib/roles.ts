@@ -64,7 +64,7 @@ export async function getUserRole(email: string): Promise<UserRole> {
     if (isStudentFormat) {
       return 'Student';
     }*/
-    return 'Student';
+    return 'Teacher';
   
     // Default to null if no specific role is matched
     //return null;

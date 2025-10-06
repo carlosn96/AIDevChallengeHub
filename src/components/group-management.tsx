@@ -53,7 +53,8 @@ import {
   AlertCircle,
   Group as GroupIcon,
   MoreVertical,
-  Users
+  Users,
+  UserPlus
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -66,6 +67,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
 import { Combobox } from './ui/combobox';
+import { Badge } from './ui/badge';
 
 type GroupManagementProps = {
   groups: Group[];
@@ -101,6 +103,10 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
     { value: 'none', label: 'No Group' },
     ...groups.map(g => ({ value: g.id, label: g.name }))
   ], [groups]);
+  
+  const unassignedStudents = useMemo(() => {
+    return users.filter(user => user.role === 'Student' && !user.groupId);
+  }, [users]);
 
 
   const form = useForm<z.infer<typeof groupFormSchema>>({
@@ -294,6 +300,68 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
           })}
         </div>
       )}
+
+      {/* Unassigned Students Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
+              <UserPlus className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Unassigned Students</CardTitle>
+              <CardDescription>
+                Students who are not yet part of any group.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {unassignedStudents.length > 0 ? (
+            <ScrollArea className="max-h-80">
+              <div className="space-y-3 pr-4">
+                {unassignedStudents.map(student => (
+                  <div key={student.uid} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-muted/50">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={student.photoURL || undefined} alt={student.displayName || 'student'} />
+                        <AvatarFallback>
+                          {student.displayName?.charAt(0).toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{student.displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                      </div>
+                    </div>
+                    <div className="w-[180px]">
+                      <Combobox
+                        options={groupOptions.filter(opt => opt.value !== 'none')}
+                        value={student.groupId || 'none'}
+                        onChange={(value) => handleGroupReassignment(student.uid, value)}
+                        placeholder="Assign group..."
+                        searchPlaceholder="Search groups..."
+                        notFoundMessage="No group found."
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <p>All students are assigned to a group.</p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="pt-4">
+            <p className="text-xs text-muted-foreground">
+                Showing {unassignedStudents.length} unassigned student(s).
+            </p>
+        </CardFooter>
+      </Card>
+
 
       {/* Edit/Create Group Dialog */}
       <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
