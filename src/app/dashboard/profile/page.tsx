@@ -83,7 +83,7 @@ export default function ProfilePage() {
       }
     }
     fetchData();
-  }, [user?.uid, user?.displayName, role, form.setValue]);
+  }, [user?.uid, role]); // eslint-disable-line react-hooks/exhaustive-deps
   
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
