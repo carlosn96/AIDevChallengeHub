@@ -16,7 +16,7 @@ import {
   addDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { type User } from 'firebase/auth';
+import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
 import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity } from './db-types';
 import { type UserRole, getUserRole } from './roles';
 
@@ -504,4 +504,35 @@ export const updateLoginSettings = async (settings: LoginSettings) => {
   if (!db) throw new Error("Firestore is not initialized.");
   const settingsRef = doc(db, 'settings', 'login');
   await setDoc(settingsRef, settings, { merge: true });
+};
+
+
+// User Profile Actions
+export const updateUserProfile = async (uid: string, data: { displayName: string }) => {
+    if (!db) throw new Error("Firestore not initialized.");
+
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, {
+        displayName: data.displayName,
+        updatedAt: serverTimestamp(),
+    });
+};
+
+export const deleteUserAccount = async (uid: string) => {
+    if (!db) throw new Error("Firestore not initialized.");
+
+    const userDocRef = doc(db, 'users', uid);
+    // This is a soft delete. We will mark the user as deleted.
+    // In a real-world scenario, you would need a Cloud Function to handle the actual deletion from Firebase Auth
+    // and to clean up other user-related data.
+    await updateDoc(userDocRef, {
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+    });
+
+    // We can also remove them from their team
+    const userProfile = await getUserProfile(uid);
+    if (userProfile?.teamId) {
+        await removeUserFromTeam(userProfile.teamId, uid);
+    }
 };

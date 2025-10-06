@@ -143,10 +143,12 @@ export default function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
+                    <Link href="/dashboard/profile" passHref>
+                        <DropdownMenuItem>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>Profile</span>
+                        </DropdownMenuItem>
+                    </Link>
                     <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
