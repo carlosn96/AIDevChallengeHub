@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const { user, role } = useSettings();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [localDisplayName, setLocalDisplayName] = useState(user?.displayName || '');
   const [group, setGroup] = useState<Group | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   
@@ -65,6 +66,10 @@ export default function ProfilePage() {
             form.setValue('groupId', currentGroup.id);
           }
         }
+        if (userProfile?.displayName) {
+          setLocalDisplayName(userProfile.displayName);
+          form.setValue('displayName', userProfile.displayName);
+        }
       }
     }
     fetchData();
@@ -75,7 +80,7 @@ export default function ProfilePage() {
     
     setIsSaving(true);
     try {
-      const dataToUpdate: { displayName?: string; groupId?: string } = {
+      const dataToUpdate: { displayName?: string; groupId?: string | null } = {
         displayName: values.displayName,
       };
 
@@ -85,7 +90,8 @@ export default function ProfilePage() {
 
       await updateUserProfile(user.uid, dataToUpdate);
 
-      // Update local state for group name if it changed
+      // Optimistically update local state
+      setLocalDisplayName(values.displayName);
       if (role === 'Student') {
         if (dataToUpdate.groupId) {
           setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
@@ -93,7 +99,6 @@ export default function ProfilePage() {
           setGroup(null);
         }
       }
-
 
       toast({
         title: 'Profile Updated',
@@ -130,13 +135,13 @@ export default function ProfilePage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <Avatar className="h-20 w-20 border-4 border-primary/20">
-              {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+              {user.photoURL && <AvatarImage src={user.photoURL} alt={localDisplayName || 'User'} />}
               <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-2xl">
-                {getInitials(user.displayName)}
+                {getInitials(localDisplayName)}
               </AvatarFallback>
             </Avatar>
             <div className="text-center sm:text-left">
-              <CardTitle className="text-2xl">{user.displayName}</CardTitle>
+              <CardTitle className="text-2xl">{localDisplayName}</CardTitle>
               <CardDescription>{user.email}</CardDescription>
               <div className="mt-2 flex justify-center sm:justify-start gap-2">
                 {role && (

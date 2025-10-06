@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { 
   doc,
   getDoc,
@@ -509,21 +509,37 @@ export const updateLoginSettings = async (settings: LoginSettings) => {
 
 
 // User Profile Actions
-export const updateUserProfile = async (uid: string, data: { displayName?: string, groupId?: string }) => {
-    if (!db) throw new Error("Firestore not initialized.");
+export const updateUserProfile = async (uid: string, data: { displayName?: string; groupId?: string | null }) => {
+    if (!db || !auth?.currentUser) throw new Error("Authentication or Firestore not initialized.");
 
     const userDocRef = doc(db, 'users', uid);
     
+    // Prepare Firestore update data
     const updateData: { [key: string]: any } = {
-      ...data,
-      updatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     };
-    
-    if (data.groupId === undefined) {
-      updateData.groupId = null;
+    if (data.displayName !== undefined) {
+        updateData.displayName = data.displayName;
     }
+    if (data.groupId !== undefined) {
+        updateData.groupId = data.groupId;
+    }
+    
+    // Create a batch to update both Auth and Firestore atomically
+    const batch = writeBatch(db);
 
-    await updateDoc(userDocRef, updateData);
+    // 1. Update Firestore
+    batch.update(userDocRef, updateData);
+
+    // 2. Update Firebase Auth profile if displayName is being changed
+    if (data.displayName && auth.currentUser.displayName !== data.displayName) {
+        await updateAuthProfile(auth.currentUser, {
+            displayName: data.displayName
+        });
+    }
+    
+    // Commit the batch
+    await batch.commit();
 };
 
 export const deleteUserAccount = async (uid: string) => {
@@ -603,4 +619,3 @@ export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updat
       updatedAt: serverTimestamp(),
     });
   };
-
