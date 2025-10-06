@@ -453,13 +453,14 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
 };
 
 // Activity Actions
-export async function createActivity(data: { title: string; description?: string }) {
+export async function createActivity(data: { title: string; description?: string, product?: string }) {
   if (!db) throw new Error('Firebase not initialized');
   
   const activityRef = collection(db, 'activities');
   const newActivity = {
     title: data.title,
     description: data.description || '',
+    product: data.product || '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -470,7 +471,7 @@ export async function createActivity(data: { title: string; description?: string
 
 export async function updateActivity(
   activityId: string, 
-  data: { title: string; description?: string }
+  data: { title: string; description?: string, product?: string }
 ) {
   if (!db) throw new Error('Firebase not initialized');
   
@@ -478,6 +479,7 @@ export async function updateActivity(
   await updateDoc(activityRef, {
     title: data.title,
     description: data.description || '',
+    product: data.product || '',
     updatedAt: serverTimestamp(),
   });
 }

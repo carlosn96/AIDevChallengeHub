@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle, Target, ListChecks, FlaskConical, Mic, Star } from 'lucide-react';
+import { Users, Pencil, Save, X, Loader2, FileCode, HelpCircle, Target, ListChecks, FlaskConical, Mic, Star, Briefcase } from 'lucide-react';
 import { updateTeamName } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
@@ -256,6 +256,15 @@ export default function TeamCard({ team, members, currentUserId, project, activi
                                 </DialogHeader>
                                 <div className="py-4 text-sm text-muted-foreground space-y-4">
                                     <p>{activity.description}</p>
+                                    {activity.product && (
+                                      <div className="mt-4">
+                                        <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                                          <Briefcase className="h-3 w-3" />
+                                          Deliverable
+                                        </h4>
+                                        <p className="text-sm">{activity.product}</p>
+                                      </div>
+                                    )}
                                 </div>
                             </DialogContent>
                           </Dialog>

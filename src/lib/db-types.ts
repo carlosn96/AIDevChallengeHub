@@ -42,6 +42,7 @@ export type Activity = {
   id: string;
   title: string;
   description?: string;
+  product?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 };

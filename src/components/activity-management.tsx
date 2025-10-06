@@ -42,6 +42,7 @@ export default function ActivityManagement({ activities }: ActivityManagementPro
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    product: '',
   });
 
   const handleOpenDialog = (activity?: Activity) => {
@@ -50,10 +51,11 @@ export default function ActivityManagement({ activities }: ActivityManagementPro
       setFormData({
         title: activity.title,
         description: activity.description || '',
+        product: activity.product || '',
       });
     } else {
       setEditingActivity(null);
-      setFormData({ title: '', description: '' });
+      setFormData({ title: '', description: '', product: '' });
     }
     setIsDialogOpen(true);
   };
@@ -61,7 +63,7 @@ export default function ActivityManagement({ activities }: ActivityManagementPro
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingActivity(null);
-    setFormData({ title: '', description: '' });
+    setFormData({ title: '', description: '', product: '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,6 +271,18 @@ export default function ActivityManagement({ activities }: ActivityManagementPro
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="text-sm md:text-base resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="product" className="text-sm font-medium">
+                Deliverable Product (Optional)
+              </label>
+              <Input
+                id="product"
+                placeholder="e.g., PDF Document, Video, Code Repository"
+                value={formData.product}
+                onChange={(e) => setFormData({ ...formData, product: e.target.value })}
+                className="text-sm md:text-base"
               />
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2">
