@@ -44,7 +44,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { type Group, type UserProfile } from '@/lib/db-types';
-import { createGroup, updateGroup, deleteGroup } from '@/lib/user-actions';
+import { createGroup, updateGroup, deleteGroup, assignGroupToUser } from '@/lib/user-actions';
 import { 
   Loader2, 
   PlusCircle, 
@@ -64,6 +64,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
+import { ScrollArea } from './ui/scroll-area';
+import { Combobox } from './ui/combobox';
 
 type GroupManagementProps = {
   groups: Group[];
@@ -94,6 +96,12 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
     }
     return map;
   }, [users]);
+  
+  const groupOptions = useMemo(() => [
+    { value: 'none', label: 'No Group' },
+    ...groups.map(g => ({ value: g.id, label: g.name }))
+  ], [groups]);
+
 
   const form = useForm<z.infer<typeof groupFormSchema>>({
     resolver: zodResolver(groupFormSchema),
@@ -151,6 +159,24 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
       setIsDeleting(false);
     }
   };
+
+  const handleGroupReassignment = async (userId: string, newGroupId: string) => {
+    try {
+      await assignGroupToUser(userId, newGroupId === 'none' ? null : newGroupId);
+      toast({
+        title: 'Group Reassigned',
+        description: 'The student has been moved to the new group.',
+      });
+    } catch (error) {
+      console.error('Failed to reassign group:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Reassignment Failed',
+        description: 'Could not reassign the student to the new group.',
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -309,30 +335,43 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
       
       {/* View Members Dialog */}
       <Dialog open={!!viewingGroup} onOpenChange={(open) => !open && setViewingGroup(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           {viewingGroup && (
             <>
               <DialogHeader>
                 <DialogTitle>Members of "{viewingGroup.name}"</DialogTitle>
                 <DialogDescription>
-                  List of all students assigned to this group.
+                  List of all students assigned to this group. You can reassign groups here.
                 </DialogDescription>
               </DialogHeader>
               <Separator />
-              <div className="py-4 max-h-[60vh] overflow-y-auto">
+              <ScrollArea className="py-4 max-h-[60vh]">
                 {(studentsByGroup.get(viewingGroup.id) || []).length > 0 ? (
                   <div className="space-y-3">
                     {(studentsByGroup.get(viewingGroup.id) || []).map(student => (
-                      <div key={student.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={student.photoURL || undefined} alt={student.displayName || 'student'} />
-                          <AvatarFallback>
-                            {student.displayName?.charAt(0).toUpperCase() || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{student.displayName}</p>
-                          <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                      <div key={student.uid} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-muted/50">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <Avatar className="h-9 w-9">
+                            <AvatarImage src={student.photoURL || undefined} alt={student.displayName || 'student'} />
+                            <AvatarFallback>
+                                {student.displayName?.charAt(0).toUpperCase() || '?'}
+                            </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{student.displayName}</p>
+                            <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                            </div>
+                        </div>
+                        <div className="w-[180px]">
+                            <Combobox
+                                options={groupOptions}
+                                value={student.groupId || 'none'}
+                                onChange={(value) => handleGroupReassignment(student.uid, value)}
+                                placeholder="Assign group..."
+                                searchPlaceholder="Search groups..."
+                                notFoundMessage="No group found."
+                                className="h-9 text-xs"
+                            />
                         </div>
                       </div>
                     ))}
@@ -342,7 +381,7 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
                     No students are currently in this group.
                   </p>
                 )}
-              </div>
+              </ScrollArea>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">Close</Button>
