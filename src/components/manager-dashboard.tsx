@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group } from 'lucide-react';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity, type Group as GroupType } from '@/lib/db-types';
 import TeamManagement from './team-management';
+import TeamCrudManagement from './team-crud-management';
 import ProjectManagement from './project-management';
 import ScheduleManagement from './schedule-management';
 import SettingsManagement from './settings-management';
@@ -106,7 +107,8 @@ export default function ManagerDashboard() {
   }
 
   const tabItems = [
-    { value: 'teams', label: 'Team Management', icon: Users },
+    { value: 'teams', label: 'Team Assignments', icon: Users },
+    { value: 'teams-crud', label: 'Teams CRUD', icon: Briefcase },
     { value: 'schedule', label: 'Schedule', icon: Calendar },
     { value: 'projects', label: 'Projects', icon: FolderKanban },
     { value: 'activities', label: 'Activities', icon: ListChecks },
@@ -149,10 +151,14 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Desktop: Tabs */}
-        <TabsList className="hidden md:grid w-full grid-cols-6 h-12 mb-6">
+        <TabsList className="hidden md:grid w-full grid-cols-7 h-12 mb-6">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2 h-5 w-5" />
-            Team Management
+            Team Assignments
+          </TabsTrigger>
+           <TabsTrigger value="teams-crud" className="h-full">
+            <Briefcase className="mr-2 h-5 w-5" />
+            Teams CRUD
           </TabsTrigger>
           <TabsTrigger value="schedule" className="h-full">
             <Calendar className="mr-2 h-5 w-5" />
@@ -178,6 +184,9 @@ export default function ManagerDashboard() {
         
         <TabsContent value="teams" className="mt-0">
             <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} />
+        </TabsContent>
+        <TabsContent value="teams-crud" className="mt-0">
+          <TeamCrudManagement teams={teams} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-0">
             <ScheduleManagement schedule={schedule} days={days} />

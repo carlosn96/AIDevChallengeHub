@@ -263,6 +263,37 @@ export const getActivitiesByIds = async (activityIds: string[]): Promise<Activit
 // --- Manager Actions ---
 
 /**
+ * Creates a new team manually.
+ * @param name The name of the new team.
+ */
+export const createTeam = async (name: string): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const newTeamData: Omit<Team, 'id'> = {
+    name: name,
+    memberIds: [],
+    memberCount: 0,
+    createdAt: serverTimestamp() as any,
+    updatedAt: serverTimestamp() as any,
+  };
+  const newDocRef = await addDoc(collection(db, 'teams'), newTeamData);
+  return newDocRef.id;
+};
+
+/**
+ * Updates a team's name manually.
+ * @param teamId The ID of the team to update.
+ * @param name The new name for the team.
+ */
+export const updateTeam = async (teamId: string, name: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const teamRef = doc(db, 'teams', teamId);
+  await updateDoc(teamRef, {
+    name,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+/**
  * Reassigns a user from one team to another.
  * This is an atomic transaction.
  * @param userId The ID of the user to reassign.
