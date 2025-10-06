@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
 import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock } from 'lucide-react';
+import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock, Link as LinkIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -47,6 +47,7 @@ import {
 import { Separator } from './ui/separator';
 import { Checkbox } from './ui/checkbox';
 import { Badge } from './ui/badge';
+import Link from 'next/link';
 
 type TeamManagementProps = {
   teams: Team[];
@@ -436,15 +437,19 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                           const activity = activities.find(a => a.id === actId);
                           if (!activity) return null;
                           
-                          const hasDeliverable = !!teamDetails.deliverables?.[actId];
+                          const deliverableUrl = teamDetails.deliverables?.[actId];
+                          const hasDeliverable = !!deliverableUrl;
+                          
                           return (
                             <div key={actId} className="text-xs flex justify-between items-center">
                               <span>{activity.title}</span>
                               {hasDeliverable ? (
-                                <Badge variant="secondary" className="text-green-500 border-green-500/20 bg-green-500/10">
-                                  <CheckCircle className="mr-1 h-3 w-3" />
-                                  Submitted
-                                </Badge>
+                                <a href={deliverableUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                                  <Badge variant="secondary" className="text-green-500 border-green-500/20 bg-green-500/10 hover:bg-green-500/20">
+                                    <LinkIcon className="mr-1 h-3 w-3" />
+                                    Submitted
+                                  </Badge>
+                                </a>
                               ) : (
                                 <Badge variant="outline">
                                   <Clock className="mr-1 h-3 w-3" />
