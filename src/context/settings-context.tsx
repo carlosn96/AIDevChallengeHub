@@ -8,8 +8,8 @@ import { findOrCreateUser, assignStudentToTeam } from '@/lib/user-actions';
 import { type LoginSettings } from '@/lib/db-types';
 import { doc, getDoc } from 'firebase/firestore';
 
-const ALLOWED_DOMAINS = ["universidad-une.com"];
-//const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx", "admin.com"]; // for dev env
+//const ALLOWED_DOMAINS = ["universidad-une.com"];
+const ALLOWED_DOMAINS = ["gmail.com", "universidad-une.com", "alumnos.udg.mx", "admin.com"]; // for dev env
 
 type AuthError = {
   title: string;

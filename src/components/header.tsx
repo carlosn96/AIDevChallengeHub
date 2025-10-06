@@ -142,7 +142,7 @@ export default function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {/* <DropdownMenuGroup>
+                  <DropdownMenuGroup>
                     <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
@@ -157,7 +157,7 @@ export default function Header() {
                     <LifeBuoy className="mr-2 h-4 w-4" />
                     <span>Support</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator /> */}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={onLogout}
                     className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
