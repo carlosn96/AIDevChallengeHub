@@ -17,7 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group } from './db-types';
 import { type UserRole, getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -536,3 +536,54 @@ export const deleteUserAccount = async (uid: string) => {
         await removeUserFromTeam(userProfile.teamId, uid);
     }
 };
+
+// Group Actions
+export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    const collectionRef = collection(db, 'groups');
+    const newDocRef = await addDoc(collectionRef, {
+      ...group,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return newDocRef.id;
+  };
+  
+  export const updateGroup = async (groupId: string, data: Partial<Omit<Group, 'id'>>) => {
+      if (!db) throw new Error("Firestore is not initialized.");
+      const groupRef = doc(db, 'groups', groupId);
+      await updateDoc(groupRef, {
+        ...data,
+        updatedAt: serverTimestamp(),
+      });
+  };
+  
+  export const deleteGroup = async (groupId: string) => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    const batch = writeBatch(db);
+  
+    // 1. Delete the group document
+    const groupRef = doc(db, 'groups', groupId);
+    batch.delete(groupRef);
+  
+    // 2. Find all users in this group and un-assign them
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('groupId', '==', groupId));
+    const querySnapshot = await getDocs(q);
+    
+    querySnapshot.forEach((userDoc) => {
+      batch.update(userDoc.ref, { groupId: null });
+    });
+  
+    // 3. Commit the batch
+    await batch.commit();
+  };
+
+  export const assignGroupToUser = async (userId: string, groupId: string | null) => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      groupId: groupId,
+      updatedAt: serverTimestamp(),
+    });
+  };

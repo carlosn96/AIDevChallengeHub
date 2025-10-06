@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks } from 'lucide-react';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,12 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity } from '@/lib/db-types';
+import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity, type Group as GroupType } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import ProjectManagement from './project-management';
 import ScheduleManagement from './schedule-management';
 import SettingsManagement from './settings-management';
 import ActivityManagement from './activity-management';
+import GroupManagement from './group-management';
 
 
 export default function ManagerDashboard() {
@@ -27,6 +28,7 @@ export default function ManagerDashboard() {
   const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
   const [days, setDays] = useState<Day[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [groups, setGroups] = useState<GroupType[]>([]);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('teams');
@@ -38,7 +40,7 @@ export default function ManagerDashboard() {
     };
 
     const unsubscribes: (() => void)[] = [];
-    let loadingCounter = 7; // Increased to 7 for activities
+    let loadingCounter = 8; // Increased to 8 for groups
     const onDataLoaded = () => {
         loadingCounter--;
         if (loadingCounter === 0) {
@@ -52,7 +54,7 @@ export default function ManagerDashboard() {
     }, () => onDataLoaded()));
 
     unsubscribes.push(onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snapshot) => {
-        setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
+        setUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
         onDataLoaded();
     }, () => onDataLoaded()));
     
@@ -73,6 +75,11 @@ export default function ManagerDashboard() {
     
     unsubscribes.push(onSnapshot(query(collection(db, 'activities'), orderBy('createdAt', 'desc')), (snapshot) => {
         setActivities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Activity)));
+        onDataLoaded();
+    }, () => onDataLoaded()));
+    
+    unsubscribes.push(onSnapshot(query(collection(db, 'groups'), orderBy('createdAt', 'desc')), (snapshot) => {
+        setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GroupType)));
         onDataLoaded();
     }, () => onDataLoaded()));
 
@@ -103,6 +110,7 @@ export default function ManagerDashboard() {
     { value: 'schedule', label: 'Schedule', icon: Calendar },
     { value: 'projects', label: 'Projects', icon: FolderKanban },
     { value: 'activities', label: 'Activities', icon: ListChecks },
+    { value: 'groups', label: 'Groups', icon: Group },
     { value: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -141,7 +149,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Desktop: Tabs */}
-        <TabsList className="hidden md:grid w-full grid-cols-5 h-12 mb-6">
+        <TabsList className="hidden md:grid w-full grid-cols-6 h-12 mb-6">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2 h-5 w-5" />
             Team Management
@@ -158,6 +166,10 @@ export default function ManagerDashboard() {
             <ListChecks className="mr-2 h-5 w-5" />
             Activities
           </TabsTrigger>
+          <TabsTrigger value="groups" className="h-full">
+            <Group className="mr-2 h-5 w-5" />
+            Groups
+          </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
             <Settings className="mr-2 h-5 w-5" />
             Settings
@@ -165,7 +177,7 @@ export default function ManagerDashboard() {
         </TabsList>
         
         <TabsContent value="teams" className="mt-0">
-            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} />
+            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} />
         </TabsContent>
         <TabsContent value="schedule" className="mt-0">
             <ScheduleManagement schedule={schedule} days={days} />
@@ -175,6 +187,9 @@ export default function ManagerDashboard() {
         </TabsContent>
         <TabsContent value="activities" className="mt-0">
             <ActivityManagement activities={activities} />
+        </TabsContent>
+        <TabsContent value="groups" className="mt-0">
+            <GroupManagement groups={groups} />
         </TabsContent>
         <TabsContent value="settings" className="mt-0">
             <SettingsManagement settings={loginSettings} />

@@ -17,10 +17,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { type Team, type UserProfile, type Project, type Activity } from '@/lib/db-types';
-import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam } from '@/lib/user-actions';
+import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
+import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, assignGroupToUser } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight } from 'lucide-react';
+import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -53,9 +53,10 @@ type TeamManagementProps = {
   users: UserProfile[];
   projects: Project[];
   activities: Activity[];
+  groups: Group[];
 };
 
-export default function TeamManagement({ teams, users, projects, activities }: TeamManagementProps) {
+export default function TeamManagement({ teams, users, projects, activities, groups }: TeamManagementProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -78,6 +79,11 @@ export default function TeamManagement({ teams, users, projects, activities }: T
     ...projects.map(p => ({ value: p.id, label: p.name }))
   ], [projects]);
 
+  const groupOptions = useMemo(() => [
+    { value: 'none', label: 'No group assigned' },
+    ...groups.map(g => ({ value: g.id, label: g.name }))
+  ], [groups]);
+
   const handleProjectAssignment = async (teamId: string, projectId: string) => {
     try {
       await assignProjectToTeam(teamId, projectId === 'none' ? null : projectId);
@@ -91,6 +97,29 @@ export default function TeamManagement({ teams, users, projects, activities }: T
         variant: 'destructive',
         title: 'Assignment Failed',
         description: 'There was an error assigning the project. Please try again.',
+      });
+    }
+  };
+
+  const handleGroupAssignment = async (userId: string, groupId: string) => {
+    try {
+      await assignGroupToUser(userId, groupId === 'none' ? null : groupId);
+      toast({
+        title: 'Group Assigned',
+        description: "The student's group has been updated.",
+      });
+      // This is a client-side update to reflect the change immediately.
+      const user = usersMap.get(userId);
+      if (user) {
+        user.groupId = groupId === 'none' ? undefined : groupId;
+        usersMap.set(userId, user);
+      }
+    } catch (error) {
+      console.error('Failed to assign group:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Assignment Failed',
+        description: 'There was an error assigning the group. Please try again.',
       });
     }
   };
@@ -349,7 +378,7 @@ export default function TeamManagement({ teams, users, projects, activities }: T
           setSelectedTeam(null);
         }
       }}>
-        <DialogContent className="max-w-[90vw] sm:max-w-lg">
+        <DialogContent className="max-w-[90vw] sm:max-w-2xl">
           {teamDetails && (
             <>
               <DialogHeader>
@@ -419,44 +448,57 @@ export default function TeamManagement({ teams, users, projects, activities }: T
                   <h4 className="font-medium text-sm">Members</h4>
                   <div className="space-y-2">
                     {teamDetails.members.map(member => (
-                      <div key={member.uid} className="flex items-center justify-between p-2 rounded-lg hover:bg-accent/50">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div key={member.uid} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 rounded-lg hover:bg-accent/50">
+                        <div className="flex items-center gap-3 flex-1 min-w-0 mb-2 sm:mb-0">
                           <Avatar className="h-9 w-9 flex-shrink-0">
                             <AvatarImage src={member.photoURL || ''} />
                             <AvatarFallback>{member.displayName?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <span className="text-sm truncate">{member.displayName}</span>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0" 
-                              disabled={isProcessing}
-                            >
-                              <UserX className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
-                              <AlertDialogDescription className="text-xs md:text-sm">
-                                This will remove the member from the team. They will be automatically re-assigned to another team if possible. This does not delete their account.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleRemoveMember(teamDetails.id, member.uid)}
-                              >
-                                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="flex-1 w-full sm:w-48">
+                                <Combobox
+                                    options={groupOptions}
+                                    value={member.groupId || 'none'}
+                                    onChange={(value) => handleGroupAssignment(member.uid, value)}
+                                    placeholder='Assign group...'
+                                    searchPlaceholder='Search group...'
+                                    notFoundMessage='No group found.'
+                                    className="h-9 text-xs"
+                                />
+                            </div>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0" 
+                                  disabled={isProcessing}
+                                >
+                                  <UserX className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remove {member.displayName}?</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-xs md:text-sm">
+                                    This will remove the member from the team. They will be automatically re-assigned to another team if possible. This does not delete their account.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                  <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
+                                    onClick={() => handleRemoveMember(teamDetails.id, member.uid)}
+                                  >
+                                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Remove
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                       </div>
                     ))}
                   </div>

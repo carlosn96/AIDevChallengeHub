@@ -7,6 +7,7 @@ export type UserProfile = {
   photoURL: string | null;
   role: 'Student' | 'Teacher' | 'Admin' | 'Manager' | null;
   teamId?: string;
+  groupId?: string;
   createdAt: Timestamp;
 };
 
@@ -17,6 +18,13 @@ export type Team = {
   projectId?: string;
   activityIds?: string[];
   memberCount: number;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+};
+
+export type Group = {
+  id: string;
+  name: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 };

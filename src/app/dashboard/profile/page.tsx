@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,7 +14,9 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/lib/user-actions';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { type Group } from '@/lib/db-types';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(3, 'Display name must be at least 3 characters.').max(50, 'Display name is too long.'),
@@ -25,13 +27,33 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const { user, role } = useSettings();
   const { toast } = useToast();
-  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [group, setGroup] = useState<Group | null>(null);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
+
+  useEffect(() => {
+    const fetchGroup = async () => {
+      if (user?.uid) {
+        const userDocRef = doc(db!, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          if (userData.groupId) {
+            const groupDocRef = doc(db!, 'groups', userData.groupId);
+            const groupDocSnap = await getDoc(groupDocRef);
+            if (groupDocSnap.exists()) {
+              setGroup({ id: groupDocSnap.id, ...groupDocSnap.data() } as Group);
+            }
+          }
+        }
+      }
+    };
+    fetchGroup();
+  }, [user?.uid]);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -89,11 +111,17 @@ export default function ProfilePage() {
             <div className="text-center sm:text-left">
               <CardTitle className="text-2xl">{user.displayName}</CardTitle>
               <CardDescription>{user.email}</CardDescription>
-              {role && (
-                <div className="mt-2 flex justify-center sm:justify-start">
-                   <CardDescription>{role}</CardDescription>
-                </div>
-              )}
+              <div className="mt-2 flex justify-center sm:justify-start gap-2">
+                {role && (
+                    <CardDescription>{role}</CardDescription>
+                )}
+                {group && (
+                  <>
+                    <Separator orientation='vertical' className='h-5' />
+                    <CardDescription>Group: {group.name}</CardDescription>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
