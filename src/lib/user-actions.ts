@@ -311,35 +311,44 @@ export const reassignUserToTeam = async (
   await runTransaction(db, async (transaction) => {
     const userRef = doc(db, 'users', userId);
     const oldTeamRef = doc(db, 'teams', oldTeamId);
+    
+    // --- READS FIRST ---
+    const oldTeamDoc = await transaction.get(oldTeamRef);
+    if (!oldTeamDoc.exists()) {
+      throw `Team with ID ${oldTeamId} does not exist.`;
+    }
+    const oldTeamData = oldTeamDoc.data() as Team;
 
+    let newTeamData: Team | null = null;
+    let newTeamRef: any = null;
+    if (newTeamId) {
+      newTeamRef = doc(db, 'teams', newTeamId);
+      const newTeamDoc = await transaction.get(newTeamRef);
+      if (!newTeamDoc.exists()) {
+        throw `Team with ID ${newTeamId} does not exist.`;
+      }
+      newTeamData = newTeamDoc.data() as Team;
+    }
+    
+    // --- THEN WRITES ---
+    
     // 1. Update the user's teamId
     transaction.update(userRef, { teamId: newTeamId });
 
     // 2. Remove user from the old team
-    const oldTeamDoc = await transaction.get(oldTeamRef);
-    if (oldTeamDoc.exists()) {
-      const oldTeamData = oldTeamDoc.data() as Team;
-      const updatedMemberIds = oldTeamData.memberIds.filter(id => id !== userId);
-      transaction.update(oldTeamRef, {
-        memberIds: updatedMemberIds,
-        memberCount: updatedMemberIds.length,
-      });
-    }
+    const updatedOldMemberIds = oldTeamData.memberIds.filter(id => id !== userId);
+    transaction.update(oldTeamRef, {
+      memberIds: updatedOldMemberIds,
+      memberCount: updatedOldMemberIds.length,
+    });
 
     // 3. Add user to the new team (if a new team is provided)
-    if (newTeamId) {
-      const newTeamRef = doc(db, 'teams', newTeamId);
-      const newTeamDoc = await transaction.get(newTeamRef);
-      if (newTeamDoc.exists()) {
-        const newTeamData = newTeamDoc.data() as Team;
-        const updatedMemberIds = [...newTeamData.memberIds, userId];
-        transaction.update(newTeamRef, {
-          memberIds: updatedMemberIds,
-          memberCount: updatedMemberIds.length,
-        });
-      } else {
-        throw new Error(`New team with ID ${newTeamId} not found.`);
-      }
+    if (newTeamId && newTeamData && newTeamRef) {
+      const updatedNewMemberIds = [...newTeamData.memberIds, userId];
+      transaction.update(newTeamRef, {
+        memberIds: updatedNewMemberIds,
+        memberCount: updatedNewMemberIds.length,
+      });
     }
   });
 };
