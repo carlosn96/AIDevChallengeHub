@@ -1,7 +1,9 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useSettings } from '@/context/settings-context';
@@ -9,31 +11,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile, getGroups, getUserProfile } from '@/lib/user-actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { type Group } from '@/lib/db-types';
 import { Combobox } from '@/components/ui/combobox';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const profileFormSchema = z.object({
-  displayName: z.string().min(3, 'Display name must be at least 3 characters.').max(50, 'Display name is too long.'),
-  groupId: z.string().optional(),
+  displayName: z.string()
+    .min(3, { message: 'Display name must be at least 3 characters.' })
+    .max(50, { message: 'Display name is too long.' }),
+  groupId: z.string(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
-  const { user, role } = useSettings();
+  const { user, role, isLoading: isAuthLoading } = useSettings();
   const { toast } = useToast();
+  const router = useRouter();
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [localDisplayName, setLocalDisplayName] = useState(user?.displayName || '');
-  const [group, setGroup] = useState<Group | null>(null);
+  
+  // Display state
+  const [currentDisplayName, setCurrentDisplayName] = useState('');
+  const [currentGroup, setCurrentGroup] = useState<Group | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: '',
+      groupId: 'none',
+    },
+  });
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -44,69 +60,85 @@ export default function ProfilePage() {
     ...groups.map(g => ({ value: g.id, label: g.name }))
   ];
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      displayName: '',
-      groupId: 'none',
-    },
-  });
-
+  // Load data and set form values
   useEffect(() => {
-    async function fetchData() {
-      if (user?.uid) {
-        setIsLoading(true);
+    let mounted = true;
+    
+    async function loadData() {
+      if (!user?.uid) {
+        if (mounted) setIsLoading(false);
+        return;
+      }
+      
+      try {
+        if(mounted) setIsLoading(true);
+        
         const availableGroups = await getGroups();
+        if (!mounted) return;
         setGroups(availableGroups);
 
         const userProfile = await getUserProfile(user.uid);
+        if (!mounted) return;
+        
         if (userProfile) {
-          const currentName = userProfile.displayName || user.displayName || '';
-          const currentGroupId = userProfile.groupId || 'none';
-
-          setLocalDisplayName(currentName);
+          const name = userProfile.displayName || user.displayName || '';
+          const gId = userProfile.groupId || 'none';
           
-          // Use setValue instead of reset to update form values correctly
-          form.setValue('displayName', currentName);
-          if (role === 'Student') {
-            form.setValue('groupId', currentGroupId);
-          }
-
-          if (currentGroupId !== 'none') {
-            const currentGroup = availableGroups.find(g => g.id === currentGroupId);
-            setGroup(currentGroup || null);
+          setCurrentDisplayName(name);
+          form.setValue('displayName', name);
+          form.setValue('groupId', gId);
+          
+          if (gId !== 'none') {
+            const grp = availableGroups.find(g => g.id === gId);
+            setCurrentGroup(grp || null);
           } else {
-            setGroup(null);
+            setCurrentGroup(null);
           }
         }
-        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load profile data.',
+        });
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
-    fetchData();
-  }, [user?.uid, role]); // eslint-disable-line react-hooks/exhaustive-deps
-  
-  const onSubmit = async (values: ProfileFormValues) => {
-    if (!user) return;
+    
+    loadData();
+    
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]); 
+
+  const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
+    if (!user?.uid) return;
     
     setIsSaving(true);
     try {
       const dataToUpdate: { displayName: string; groupId?: string | null } = {
-        displayName: values.displayName,
+        displayName: data.displayName.trim(),
       };
 
       if (role === 'Student') {
-        dataToUpdate.groupId = values.groupId === 'none' ? null : values.groupId;
+        dataToUpdate.groupId = data.groupId === 'none' ? null : data.groupId;
       }
 
       await updateUserProfile(user.uid, dataToUpdate);
 
-      // Eagerly update local state for immediate UI feedback
-      setLocalDisplayName(values.displayName);
+      setCurrentDisplayName(data.displayName.trim());
       if (role === 'Student') {
         if (dataToUpdate.groupId) {
-          setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
+          const grp = groups.find(g => g.id === dataToUpdate.groupId);
+          setCurrentGroup(grp || null);
         } else {
-          setGroup(null);
+          setCurrentGroup(null);
         }
       }
 
@@ -126,19 +158,31 @@ export default function ProfilePage() {
     }
   };
 
-  if (!user) {
+  if (isAuthLoading) {
     return null;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight title-neon">
-          My Profile
-        </h1>
-        <p className="text-muted-foreground">
-          View and manage your account settings.
-        </p>
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight title-neon">
+            My Profile
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage your account settings.
+          </p>
+        </div>
       </div>
 
       <Card className="card-glass">
@@ -154,8 +198,16 @@ export default function ProfilePage() {
             </div>
             <Separator className="my-6" />
             <div className="space-y-6">
-              <div className="space-y-2"><Skeleton className="h-5 w-24" /><Skeleton className="h-10 w-full" /></div>
-              {role === 'Student' && <div className="space-y-2"><Skeleton className="h-5 w-16" /><Skeleton className="h-10 w-full" /></div>}
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              {role === 'Student' && (
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              )}
               <Skeleton className="h-10 w-32" />
             </div>
           </div>
@@ -164,22 +216,22 @@ export default function ProfilePage() {
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <Avatar className="h-20 w-20 border-4 border-primary/20">
-                  {user.photoURL && <AvatarImage src={user.photoURL} alt={localDisplayName || 'User'} />}
+                  {user?.photoURL && (
+                    <AvatarImage src={user.photoURL} alt={currentDisplayName || 'User'} />
+                  )}
                   <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-2xl">
-                    {getInitials(localDisplayName)}
+                    {getInitials(currentDisplayName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-center sm:text-left">
-                  <CardTitle className="text-2xl">{localDisplayName}</CardTitle>
-                  <CardDescription>{user.email}</CardDescription>
+                  <CardTitle className="text-2xl">{currentDisplayName}</CardTitle>
+                  <CardDescription>{user?.email}</CardDescription>
                   <div className="mt-2 flex justify-center sm:justify-start gap-2">
-                    {role && (
-                        <CardDescription>{role}</CardDescription>
-                    )}
-                    {group && role === 'Student' && (
+                    {role && <CardDescription>{role}</CardDescription>}
+                    {currentGroup && role === 'Student' && (
                       <>
-                        <Separator orientation='vertical' className='h-5' />
-                        <CardDescription>Group: {group.name}</CardDescription>
+                        <Separator orientation="vertical" className="h-5" />
+                        <CardDescription>Group: {currentGroup.name}</CardDescription>
                       </>
                     )}
                   </div>
@@ -188,51 +240,39 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <Separator />
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your display name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    placeholder="Enter your display name"
+                    {...form.register('displayName')}
                   />
-
-                  {role === 'Student' && (
-                    <FormField
-                      control={form.control}
-                      name="groupId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Group</FormLabel>
-                          <FormControl>
-                            <Combobox
-                              options={groupOptions}
-                              value={field.value || 'none'}
-                              onChange={field.onChange}
-                              placeholder="Select your group..."
-                              searchPlaceholder="Search groups..."
-                              notFoundMessage="No groups available."
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {form.formState.errors.displayName && (
+                    <p className="text-sm text-destructive">{form.formState.errors.displayName.message}</p>
                   )}
+                </div>
 
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </form>
-              </Form>
+                {role === 'Student' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="group">Group</Label>
+                    <Combobox
+                      options={groupOptions}
+                      value={form.watch('groupId')}
+                      onChange={(value) => form.setValue('groupId', value)}
+                      placeholder="Select your group..."
+                      searchPlaceholder="Search groups..."
+                      notFoundMessage="No groups available."
+                    />
+                  </div>
+                )}
+
+                <Button type="submit" disabled={isSaving || !form.formState.isDirty}>
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </form>
             </CardContent>
           </>
         )}
