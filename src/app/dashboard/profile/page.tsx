@@ -75,7 +75,7 @@ export default function ProfilePage() {
     
     setIsSaving(true);
     try {
-      const dataToUpdate: Partial<ProfileFormValues> = {
+      const dataToUpdate: { displayName?: string; groupId?: string } = {
         displayName: values.displayName,
       };
 
@@ -86,11 +86,14 @@ export default function ProfilePage() {
       await updateUserProfile(user.uid, dataToUpdate);
 
       // Update local state for group name if it changed
-      if (dataToUpdate.groupId) {
-        setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
-      } else if (dataToUpdate.groupId === undefined) {
-        setGroup(null);
+      if (role === 'Student') {
+        if (dataToUpdate.groupId) {
+          setGroup(groups.find(g => g.id === dataToUpdate.groupId) || null);
+        } else if (dataToUpdate.groupId === undefined) {
+          setGroup(null);
+        }
       }
+
 
       toast({
         title: 'Profile Updated',
