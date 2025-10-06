@@ -189,7 +189,7 @@ export default function ManagerDashboard() {
             <ActivityManagement activities={activities} />
         </TabsContent>
         <TabsContent value="groups" className="mt-0">
-            <GroupManagement groups={groups} />
+            <GroupManagement groups={groups} users={users} />
         </TabsContent>
         <TabsContent value="settings" className="mt-0">
             <SettingsManagement settings={loginSettings} />

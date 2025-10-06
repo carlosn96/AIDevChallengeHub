@@ -1,147 +1,210 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, type SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useSettings } from '@/context/settings-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile, getGroups, getUserProfile } from '@/lib/user-actions';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Mail, Shield, Users, Check, X, ChevronDown } from 'lucide-react';
 import { type Group } from '@/lib/db-types';
-import { Combobox } from '@/components/ui/combobox';
-import { Skeleton } from '@/components/ui/skeleton';
 
-const profileFormSchema = z.object({
-  displayName: z.string()
-    .min(3, { message: 'Display name must be at least 3 characters.' })
-    .max(50, { message: 'Display name is too long.' }),
-  groupId: z.string(),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+interface ProfileData {
+  displayName: string;
+  groupId: string;
+}
 
 export default function ProfilePage() {
-  const { user, role, isLoading: isAuthLoading } = useSettings();
-  const { toast } = useToast();
   const router = useRouter();
-  
+  const { user, role } = useSettings();
+  const { toast } = useToast();
+
+  // Loading states
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Display state
-  const [currentDisplayName, setCurrentDisplayName] = useState('');
-  const [currentGroup, setCurrentGroup] = useState<Group | null>(null);
-  const [groups, setGroups] = useState<Group[]>([]);
-  
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      displayName: '',
-      groupId: 'none',
-    },
+
+  // Form data
+  const [formData, setFormData] = useState<ProfileData>({
+    displayName: '',
+    groupId: 'none',
   });
 
-  const getInitials = (name: string | null | undefined) => {
+  // Original data for comparison
+  const [originalData, setOriginalData] = useState<ProfileData>({
+    displayName: '',
+    groupId: 'none',
+  });
+
+  // Additional data
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+
+  // Validation
+  const [errors, setErrors] = useState<{ displayName?: string }>({});
+
+  // Helper functions
+  const getInitials = (name: string): string => {
     if (!name) return '??';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  const groupOptions = [
-    { value: 'none', label: 'No group' },
-    ...groups.map(g => ({ value: g.id, label: g.name }))
-  ];
+  const hasChanges = (): boolean => {
+    return (
+      formData.displayName !== originalData.displayName ||
+      formData.groupId !== originalData.groupId
+    );
+  };
 
-  // Load data and set form values
+  // Load initial data
   useEffect(() => {
-    let mounted = true;
-    
-    async function loadData() {
+    let isMounted = true;
+
+    const loadProfileData = async () => {
       if (!user?.uid) {
-        if (mounted) setIsLoading(false);
+        setIsInitialLoading(false);
         return;
       }
-      
-      try {
-        if(mounted) setIsLoading(true);
-        
-        const availableGroups = await getGroups();
-        if (!mounted) return;
-        setGroups(availableGroups);
 
-        const userProfile = await getUserProfile(user.uid);
-        if (!mounted) return;
+      try {
+        // Load groups
+        const groups = await getGroups();
         
-        if (userProfile) {
-          const name = userProfile.displayName || user.displayName || '';
-          const gId = userProfile.groupId || 'none';
-          
-          setCurrentDisplayName(name);
-          
-          // This is the correct way to set form values after async load
-          form.setValue('displayName', name);
-          form.setValue('groupId', gId);
-          
-          if (gId !== 'none') {
-            const grp = availableGroups.find(g => g.id === gId);
-            setCurrentGroup(grp || null);
-          } else {
-            setCurrentGroup(null);
+        // Load user profile
+        const profile = await getUserProfile(user.uid);
+
+        if (!isMounted) return;
+
+        setAvailableGroups(groups);
+
+        if (profile) {
+          const displayName = profile.displayName || user.displayName || '';
+          const groupId = profile.groupId || 'none';
+
+          const data: ProfileData = {
+            displayName,
+            groupId,
+          };
+
+          setFormData(data);
+          setOriginalData(data);
+
+          // Set selected group
+          if (groupId !== 'none') {
+            const group = groups.find((g) => g.id === groupId);
+            setSelectedGroup(group || null);
           }
         }
       } catch (error) {
         console.error('Error loading profile:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load profile data.',
-        });
+        if (isMounted) {
+          toast({
+            variant: 'destructive',
+            title: 'Error Loading Profile',
+            description: 'Failed to load your profile data. Please refresh the page.',
+          });
+        }
       } finally {
-        if (mounted) {
-          setIsLoading(false);
+        if (isMounted) {
+          setIsInitialLoading(false);
         }
       }
-    }
-    
-    loadData();
-    
-    return () => {
-      mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]); 
 
-  const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
-    if (!user?.uid) return;
+    loadProfileData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.uid, user?.displayName, toast]);
+
+  // Validation
+  const validateDisplayName = (name: string): string | undefined => {
+    if (!name || name.trim().length === 0) {
+      return 'Display name is required';
+    }
+    if (name.trim().length < 3) {
+      return 'Display name must be at least 3 characters';
+    }
+    if (name.trim().length > 50) {
+      return 'Display name must be less than 50 characters';
+    }
+    return undefined;
+  };
+
+  // Event handlers
+  const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, displayName: value }));
     
+    // Clear error when user starts typing
+    if (errors.displayName) {
+      setErrors((prev) => ({ ...prev, displayName: undefined }));
+    }
+  };
+
+  const handleGroupChange = (groupId: string) => {
+    setFormData((prev) => ({ ...prev, groupId }));
+    setIsGroupDropdownOpen(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-group-dropdown]')) {
+        setIsGroupDropdownOpen(false);
+      }
+    };
+
+    if (isGroupDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isGroupDropdownOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user?.uid) return;
+
+    // Validate
+    const nameError = validateDisplayName(formData.displayName);
+    if (nameError) {
+      setErrors({ displayName: nameError });
+      return;
+    }
+
     setIsSaving(true);
+
     try {
-      const dataToUpdate: { displayName: string; groupId?: string | null } = {
-        displayName: data.displayName.trim(),
+      const updateData: { displayName: string; groupId?: string | null } = {
+        displayName: formData.displayName.trim(),
       };
 
       if (role === 'Student') {
-        dataToUpdate.groupId = data.groupId === 'none' ? null : data.groupId;
+        updateData.groupId = formData.groupId === 'none' ? null : formData.groupId;
       }
 
-      await updateUserProfile(user.uid, dataToUpdate);
+      await updateUserProfile(user.uid, updateData);
 
-      setCurrentDisplayName(data.displayName.trim());
-      if (role === 'Student') {
-        if (dataToUpdate.groupId) {
-          const grp = groups.find(g => g.id === dataToUpdate.groupId);
-          setCurrentGroup(grp || null);
-        } else {
-          setCurrentGroup(null);
-        }
+      // Update original data
+      setOriginalData({ ...formData });
+
+      // Update selected group
+      if (formData.groupId !== 'none') {
+        const group = availableGroups.find((g) => g.id === formData.groupId);
+        setSelectedGroup(group || null);
+      } else {
+        setSelectedGroup(null);
       }
 
       toast({
@@ -149,24 +212,52 @@ export default function ProfilePage() {
         description: 'Your profile has been successfully updated.',
       });
     } catch (error) {
-      console.error('Profile update error:', error);
+      console.error('Error updating profile:', error);
       toast({
         variant: 'destructive',
         title: 'Update Failed',
-        description: 'There was an error updating your profile. Please try again.',
+        description: 'Failed to update your profile. Please try again.',
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isAuthLoading) {
-    return null;
+  const handleCancel = () => {
+    setFormData({ ...originalData });
+    setErrors({});
+  };
+
+  // Loading state
+  if (isInitialLoading) {
+    return (
+      <div className="container mx-auto max-w-4xl py-8 px-4">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto max-w-4xl py-8 px-4">
+        <Alert variant="destructive">
+          <AlertDescription>
+            You must be logged in to view this page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <div className="space-y-4">
+    <div className="container mx-auto max-w-4xl py-8 px-4 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="sm"
@@ -176,109 +267,211 @@ export default function ProfilePage() {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight title-neon">
-            My Profile
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage your account settings.
-          </p>
-        </div>
       </div>
 
-      <Card className="card-glass">
-        {isLoading ? (
-          <div className="p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Skeleton className="h-20 w-20 rounded-full" />
-              <div className="space-y-2 text-center sm:text-left">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-5 w-64" />
-                <Skeleton className="h-5 w-32" />
-              </div>
+      {/* Page Title */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
+        <p className="text-muted-foreground">
+          Manage your personal information and preferences
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Profile Overview Card */}
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Profile Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Avatar */}
+            <div className="flex justify-center">
+              <Avatar className="h-24 w-24 border-4 border-primary/10">
+                {user.photoURL ? (
+                  <AvatarImage src={user.photoURL} alt={originalData.displayName} />
+                ) : null}
+                <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/20 to-primary/5">
+                  {getInitials(originalData.displayName)}
+                </AvatarFallback>
+              </Avatar>
             </div>
-            <Separator className="my-6" />
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-10 w-full" />
+
+            {/* User Info */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">Name</p>
+                  <p className="text-sm font-semibold truncate">
+                    {originalData.displayName || 'Not set'}
+                  </p>
+                </div>
               </div>
+
+              <Separator />
+
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-muted-foreground">Email</p>
+                  <p className="text-sm font-semibold truncate">{user.email}</p>
+                </div>
+              </div>
+
+              {role && (
+                <>
+                  <Separator />
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">Role</p>
+                      <p className="text-sm font-semibold">{role}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {role === 'Student' && selectedGroup && (
+                <>
+                  <Separator />
+                  <div className="flex items-start gap-3">
+                    <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">Group</p>
+                      <p className="text-sm font-semibold">{selectedGroup.name}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Edit Profile Form */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Edit Profile</CardTitle>
+            <CardDescription>
+              Update your profile information below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Display Name */}
+              <div className="space-y-2">
+                <Label htmlFor="displayName">
+                  Display Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  value={formData.displayName}
+                  onChange={handleDisplayNameChange}
+                  placeholder="Enter your display name"
+                  className={errors.displayName ? 'border-destructive' : ''}
+                />
+                {errors.displayName && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <X className="h-3 w-3" />
+                    {errors.displayName}
+                  </p>
+                )}
+              </div>
+
+              {/* Group Selection (Students only) */}
               {role === 'Student' && (
                 <div className="space-y-2">
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              )}
-              <Skeleton className="h-10 w-32" />
-            </div>
-          </div>
-        ) : (
-          <>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Avatar className="h-20 w-20 border-4 border-primary/20">
-                  {user?.photoURL && (
-                    <AvatarImage src={user.photoURL} alt={currentDisplayName || 'User'} />
-                  )}
-                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-2xl">
-                    {getInitials(currentDisplayName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-center sm:text-left">
-                  <CardTitle className="text-2xl">{currentDisplayName}</CardTitle>
-                  <CardDescription>{user?.email}</CardDescription>
-                  <div className="mt-2 flex justify-center sm:justify-start gap-2">
-                    {role && <CardDescription>{role}</CardDescription>}
-                    {currentGroup && role === 'Student' && (
-                      <>
-                        <Separator orientation="vertical" className="h-5" />
-                        <CardDescription>Group: {currentGroup.name}</CardDescription>
-                      </>
+                  <Label htmlFor="groupId">Group</Label>
+                  <div className="relative" data-group-dropdown>
+                    <button
+                      type="button"
+                      onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className={formData.groupId === 'none' ? 'text-muted-foreground' : ''}>
+                        {formData.groupId === 'none' 
+                          ? 'No group' 
+                          : availableGroups.find(g => g.id === formData.groupId)?.name || 'No group'}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isGroupDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {isGroupDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md animate-in fade-in-0 zoom-in-95">
+                        <div className="max-h-60 overflow-auto p-1">
+                          <button
+                            type="button"
+                            onClick={() => handleGroupChange('none')}
+                            className={`w-full rounded-sm px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors ${
+                              formData.groupId === 'none' ? 'bg-accent' : ''
+                            }`}
+                          >
+                            No group
+                          </button>
+                          {availableGroups.map((group) => (
+                            <button
+                              key={group.id}
+                              type="button"
+                              onClick={() => handleGroupChange(group.id)}
+                              className={`w-full rounded-sm px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground cursor-pointer transition-colors ${
+                                formData.groupId === group.id ? 'bg-accent' : ''
+                              }`}
+                            >
+                              {group.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select the group you belong to
+                  </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Separator />
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    type="text"
-                    placeholder="Enter your display name"
-                    {...form.register('displayName')}
-                  />
-                  {form.formState.errors.displayName && (
-                    <p className="text-sm text-destructive">{form.formState.errors.displayName.message}</p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={isSaving || !hasChanges() || !!errors.displayName}
+                  className="gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Save Changes
+                    </>
                   )}
-                </div>
-
-                {role === 'Student' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="group">Group</Label>
-                    <Combobox
-                      options={groupOptions}
-                      value={form.watch('groupId')}
-                      onChange={(value) => form.setValue('groupId', value, { shouldDirty: true })}
-                      placeholder="Select your group..."
-                      searchPlaceholder="Search groups..."
-                      notFoundMessage="No groups available."
-                    />
-                  </div>
-                )}
-
-                <Button type="submit" disabled={isSaving || !form.formState.isDirty}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
-              </form>
-            </CardContent>
-          </>
-        )}
-      </Card>
+
+                {hasChanges() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+
+              {!hasChanges() && !errors.displayName && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  All changes saved
+                </p>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Form,
@@ -42,7 +43,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { type Group } from '@/lib/db-types';
+import { type Group, type UserProfile } from '@/lib/db-types';
 import { createGroup, updateGroup, deleteGroup } from '@/lib/user-actions';
 import { 
   Loader2, 
@@ -51,7 +52,8 @@ import {
   Trash2, 
   AlertCircle,
   Group as GroupIcon,
-  MoreVertical
+  MoreVertical,
+  Users
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -60,21 +62,38 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Separator } from './ui/separator';
 
 type GroupManagementProps = {
   groups: Group[];
+  users: UserProfile[];
 };
 
 const groupFormSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters.'),
 });
 
-export default function GroupManagement({ groups }: GroupManagementProps) {
+export default function GroupManagement({ groups, users }: GroupManagementProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [viewingGroup, setViewingGroup] = useState<Group | null>(null);
+
+  const studentsByGroup = useMemo(() => {
+    const map = new Map<string, UserProfile[]>();
+    for (const user of users) {
+      if (user.groupId) {
+        if (!map.has(user.groupId)) {
+          map.set(user.groupId, []);
+        }
+        map.get(user.groupId)!.push(user);
+      }
+    }
+    return map;
+  }, [users]);
 
   const form = useForm<z.infer<typeof groupFormSchema>>({
     resolver: zodResolver(groupFormSchema),
@@ -84,13 +103,13 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
   const handleEditClick = (group: Group) => {
     setEditingGroup(group);
     form.reset({ name: group.name });
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
 
   const handleCreateClick = () => {
     setEditingGroup(null);
     form.reset({ name: '' });
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
   
   const handleSubmit = async (values: z.infer<typeof groupFormSchema>) => {
@@ -103,7 +122,7 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
         await createGroup(values);
         toast({ title: 'Group Created', description: `"${values.name}" has been created.` });
       }
-      setIsDialogOpen(false);
+      setIsFormDialogOpen(false);
     } catch (error) {
       console.error('Failed to save group:', error);
       toast({
@@ -169,11 +188,15 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
-            <Card key={group.id} className="group flex flex-col justify-between relative overflow-hidden transition-all hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50">
-              <div>
-                <CardHeader className="relative pb-3">
-                  <div className="flex items-start justify-between gap-2">
+          {groups.map((group) => {
+            const members = studentsByGroup.get(group.id) || [];
+            return (
+              <Card 
+                key={group.id} 
+                className="group flex flex-col justify-between relative overflow-hidden transition-all hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50"
+              >
+                <div onClick={() => setViewingGroup(group)} className="cursor-pointer flex-1 flex flex-col">
+                  <CardHeader className="relative pb-3">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 flex-shrink-0">
                         <GroupIcon className="h-4 w-4 text-primary" />
@@ -182,13 +205,27 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
                         {group.name}
                       </CardTitle>
                     </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{members.length} member{members.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  </CardContent>
+                </div>
+                <CardFooter className="pt-0">
+                  <div className="absolute top-2 right-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setViewingGroup(group)}>
+                          <Users className="h-4 w-4 mr-2" />
+                          View Members
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(group)}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Edit
@@ -225,14 +262,15 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                </CardHeader>
-              </div>
-            </Card>
-          ))}
+                </CardFooter>
+              </Card>
+            )
+          })}
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Edit/Create Group Dialog */}
+      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingGroup ? 'Edit Group' : 'Create New Group'}</DialogTitle>
@@ -266,6 +304,52 @@ export default function GroupManagement({ groups }: GroupManagementProps) {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Members Dialog */}
+      <Dialog open={!!viewingGroup} onOpenChange={(open) => !open && setViewingGroup(null)}>
+        <DialogContent className="sm:max-w-md">
+          {viewingGroup && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Members of "{viewingGroup.name}"</DialogTitle>
+                <DialogDescription>
+                  List of all students assigned to this group.
+                </DialogDescription>
+              </DialogHeader>
+              <Separator />
+              <div className="py-4 max-h-[60vh] overflow-y-auto">
+                {(studentsByGroup.get(viewingGroup.id) || []).length > 0 ? (
+                  <div className="space-y-3">
+                    {(studentsByGroup.get(viewingGroup.id) || []).map(student => (
+                      <div key={student.uid} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={student.photoURL || undefined} alt={student.displayName || 'student'} />
+                          <AvatarFallback>
+                            {student.displayName?.charAt(0).toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{student.displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-8">
+                    No students are currently in this group.
+                  </p>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">Close</Button>
+                </DialogClose>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
