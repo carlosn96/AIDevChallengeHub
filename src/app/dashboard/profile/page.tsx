@@ -85,6 +85,8 @@ export default function ProfilePage() {
           const gId = userProfile.groupId || 'none';
           
           setCurrentDisplayName(name);
+          
+          // This is the correct way to set form values after async load
           form.setValue('displayName', name);
           form.setValue('groupId', gId);
           
@@ -260,7 +262,7 @@ export default function ProfilePage() {
                     <Combobox
                       options={groupOptions}
                       value={form.watch('groupId')}
-                      onChange={(value) => form.setValue('groupId', value)}
+                      onChange={(value) => form.setValue('groupId', value, { shouldDirty: true })}
                       placeholder="Select your group..."
                       searchPlaceholder="Search groups..."
                       notFoundMessage="No groups available."
