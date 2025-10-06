@@ -521,25 +521,20 @@ export const updateUserProfile = async (uid: string, data: { displayName?: strin
     if (data.displayName !== undefined) {
         updateData.displayName = data.displayName;
     }
+    // Handle groupId, allowing it to be set to null
     if (data.groupId !== undefined) {
         updateData.groupId = data.groupId;
     }
     
-    // Create a batch to update both Auth and Firestore atomically
-    const batch = writeBatch(db);
-
-    // 1. Update Firestore
-    batch.update(userDocRef, updateData);
-
-    // 2. Update Firebase Auth profile if displayName is being changed
+    // Update Firebase Auth profile if displayName is being changed
     if (data.displayName && auth.currentUser.displayName !== data.displayName) {
         await updateAuthProfile(auth.currentUser, {
             displayName: data.displayName
         });
     }
-    
-    // Commit the batch
-    await batch.commit();
+
+    // Update Firestore document
+    await updateDoc(userDocRef, updateData);
 };
 
 export const deleteUserAccount = async (uid: string) => {
