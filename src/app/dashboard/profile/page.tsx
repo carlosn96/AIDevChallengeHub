@@ -16,6 +16,7 @@ import { updateUserProfile, getGroups, getUserProfile } from '@/lib/user-actions
 import { Loader2 } from 'lucide-react';
 import { type Group } from '@/lib/db-types';
 import { Combobox } from '@/components/ui/combobox';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(3, 'Display name must be at least 3 characters.').max(50, 'Display name is too long.'),
@@ -28,6 +29,7 @@ export default function ProfilePage() {
   const { user, role } = useSettings();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [localDisplayName, setLocalDisplayName] = useState(user?.displayName || '');
   const [group, setGroup] = useState<Group | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -53,6 +55,7 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchData() {
       if (user?.uid) {
+        setIsLoading(true);
         const availableGroups = await getGroups();
         setGroups(availableGroups);
 
@@ -62,10 +65,12 @@ export default function ProfilePage() {
           const currentGroupId = userProfile.groupId || 'none';
 
           setLocalDisplayName(currentName);
-          form.reset({
-            displayName: currentName,
-            groupId: currentGroupId,
-          });
+          
+          // Use setValue instead of reset to update form values correctly
+          form.setValue('displayName', currentName);
+          if (role === 'Student') {
+            form.setValue('groupId', currentGroupId);
+          }
 
           if (currentGroupId !== 'none') {
             const currentGroup = availableGroups.find(g => g.id === currentGroupId);
@@ -74,10 +79,11 @@ export default function ProfilePage() {
             setGroup(null);
           }
         }
+        setIsLoading(false);
       }
     }
     fetchData();
-  }, [user?.uid, user?.displayName, form]);
+  }, [user?.uid, user?.displayName, role, form.setValue]);
   
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
@@ -94,6 +100,7 @@ export default function ProfilePage() {
 
       await updateUserProfile(user.uid, dataToUpdate);
 
+      // Eagerly update local state for immediate UI feedback
       setLocalDisplayName(values.displayName);
       if (role === 'Student') {
         if (dataToUpdate.groupId) {
@@ -120,7 +127,7 @@ export default function ProfilePage() {
   };
 
   if (!user) {
-    return null; // Or a loading state
+    return null;
   }
 
   return (
@@ -135,81 +142,101 @@ export default function ProfilePage() {
       </div>
 
       <Card className="card-glass">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <Avatar className="h-20 w-20 border-4 border-primary/20">
-              {user.photoURL && <AvatarImage src={user.photoURL} alt={localDisplayName || 'User'} />}
-              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-2xl">
-                {getInitials(localDisplayName)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-center sm:text-left">
-              <CardTitle className="text-2xl">{localDisplayName}</CardTitle>
-              <CardDescription>{user.email}</CardDescription>
-              <div className="mt-2 flex justify-center sm:justify-start gap-2">
-                {role && (
-                    <CardDescription>{role}</CardDescription>
-                )}
-                {group && role === 'Student' && (
-                  <>
-                    <Separator orientation='vertical' className='h-5' />
-                    <CardDescription>Group: {group.name}</CardDescription>
-                  </>
-                )}
+        {isLoading ? (
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Skeleton className="h-20 w-20 rounded-full" />
+              <div className="space-y-2 text-center sm:text-left">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-5 w-64" />
+                <Skeleton className="h-5 w-32" />
               </div>
             </div>
+            <Separator className="my-6" />
+            <div className="space-y-6">
+              <div className="space-y-2"><Skeleton className="h-5 w-24" /><Skeleton className="h-10 w-full" /></div>
+              {role === 'Student' && <div className="space-y-2"><Skeleton className="h-5 w-16" /><Skeleton className="h-10 w-full" /></div>}
+              <Skeleton className="h-10 w-32" />
+            </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter your display name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        ) : (
+          <>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Avatar className="h-20 w-20 border-4 border-primary/20">
+                  {user.photoURL && <AvatarImage src={user.photoURL} alt={localDisplayName || 'User'} />}
+                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-semibold text-2xl">
+                    {getInitials(localDisplayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-center sm:text-left">
+                  <CardTitle className="text-2xl">{localDisplayName}</CardTitle>
+                  <CardDescription>{user.email}</CardDescription>
+                  <div className="mt-2 flex justify-center sm:justify-start gap-2">
+                    {role && (
+                        <CardDescription>{role}</CardDescription>
+                    )}
+                    {group && role === 'Student' && (
+                      <>
+                        <Separator orientation='vertical' className='h-5' />
+                        <CardDescription>Group: {group.name}</CardDescription>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Separator />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your display name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              {role === 'Student' && (
-                 <FormField
-                  control={form.control}
-                  name="groupId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Group</FormLabel>
-                      <FormControl>
-                        <Combobox
-                          options={groupOptions}
-                          value={field.value || 'none'}
-                          onChange={field.onChange}
-                          placeholder="Select your group..."
-                          searchPlaceholder="Search groups..."
-                          notFoundMessage="No groups available."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                  {role === 'Student' && (
+                    <FormField
+                      control={form.control}
+                      name="groupId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Group</FormLabel>
+                          <FormControl>
+                            <Combobox
+                              options={groupOptions}
+                              value={field.value || 'none'}
+                              onChange={field.onChange}
+                              placeholder="Select your group..."
+                              searchPlaceholder="Search groups..."
+                              notFoundMessage="No groups available."
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
-              )}
 
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </>
+        )}
       </Card>
-      
     </div>
   );
 }
