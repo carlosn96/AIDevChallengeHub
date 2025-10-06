@@ -318,7 +318,7 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
         </CardHeader>
         <CardContent>
           {unassignedStudents.length > 0 ? (
-            <ScrollArea className="max-h-80">
+            <ScrollArea className="h-80">
               <div className="space-y-3 pr-4">
                 {unassignedStudents.map(student => (
                   <div key={student.uid} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-muted/50">
