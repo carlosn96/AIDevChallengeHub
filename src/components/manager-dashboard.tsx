@@ -3,15 +3,9 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase, FileCheck, Trophy } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase, FileCheck, Trophy, ArrowLeft, Activity as ActivityIcon, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity, type Group as GroupType, type Rubric } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import TeamCrudManagement from './team-crud-management';
@@ -35,7 +29,7 @@ export default function ManagerDashboard() {
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('teams');
+  const [activeView, setActiveView] = useState<string | null>(null);
 
   useEffect(() => {
     if (!db) {
@@ -44,7 +38,7 @@ export default function ManagerDashboard() {
     };
 
     const unsubscribes: (() => void)[] = [];
-    let loadingCounter = 9; // Now 9 for rubrics
+    let loadingCounter = 9;
     const onDataLoaded = () => {
         loadingCounter--;
         if (loadingCounter === 0) {
@@ -114,120 +108,158 @@ export default function ManagerDashboard() {
     );
   }
 
-  const tabItems = [
-    { value: 'teams', label: 'Team Assignments', icon: Users },
-    { value: 'teams-crud', label: 'Team Administration', icon: Briefcase },
-    { value: 'schedule', label: 'Schedule', icon: Calendar },
-    { value: 'projects', label: 'Projects', icon: FolderKanban },
-    { value: 'activities', label: 'Activities', icon: ListChecks },
-    { value: 'groups', label: 'Groups', icon: Group },
-    { value: 'rubrics', label: 'Rubrics', icon: FileCheck },
-    { value: 'results', label: 'Results', icon: Trophy },
-    { value: 'settings', label: 'Settings', icon: Settings },
+  const menuItems = [
+    { 
+      id: 'teams', 
+      label: 'Team Assignments', 
+      icon: Users, 
+      color: 'from-blue-500 to-cyan-500',
+      description: 'Assign members to teams'
+    },
+    { 
+      id: 'teams-crud', 
+      label: 'Team Administration', 
+      icon: Briefcase, 
+      color: 'from-purple-500 to-pink-500',
+      description: 'Create and manage teams'
+    },
+    { 
+      id: 'schedule', 
+      label: 'Schedule', 
+      icon: Calendar, 
+      color: 'from-green-500 to-emerald-500',
+      description: 'Manage event schedule'
+    },
+    { 
+      id: 'projects', 
+      label: 'Projects', 
+      icon: FolderKanban, 
+      color: 'from-orange-500 to-red-500',
+      description: 'Oversee all projects'
+    },
+    { 
+      id: 'activities', 
+      label: 'Activities', 
+      icon: ListChecks, 
+      color: 'from-teal-500 to-cyan-500',
+      description: 'Manage activities'
+    },
+    { 
+      id: 'groups', 
+      label: 'Groups', 
+      icon: Group, 
+      color: 'from-indigo-500 to-blue-500',
+      description: 'Organize user groups'
+    },
+    { 
+      id: 'rubrics', 
+      label: 'Rubrics', 
+      icon: FileCheck, 
+      color: 'from-amber-500 to-orange-500',
+      description: 'Setup evaluation rubrics'
+    },
+    { 
+      id: 'results', 
+      label: 'Results', 
+      icon: Trophy, 
+      color: 'from-yellow-500 to-amber-500',
+      description: 'View evaluation results'
+    },
+    { 
+      id: 'settings', 
+      label: 'Settings', 
+      icon: Settings, 
+      color: 'from-gray-500 to-slate-500',
+      description: 'System configuration'
+    },
   ];
 
+  // Si hay una vista activa, mostrarla
+  if (activeView) {
+    return (
+      <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setActiveView(null)}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold">
+              {menuItems.find(m => m.id === activeView)?.label}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {menuItems.find(m => m.id === activeView)?.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {activeView === 'teams' && <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} rubrics={rubrics} />}
+          {activeView === 'teams-crud' && <TeamCrudManagement teams={teams} users={users} />}
+          {activeView === 'schedule' && <ScheduleManagement schedule={schedule} days={days} />}
+          {activeView === 'projects' && <ProjectManagement projects={projects} />}
+          {activeView === 'activities' && <ActivityManagement activities={activities} />}
+          {activeView === 'groups' && <GroupManagement groups={groups} users={users} />}
+          {activeView === 'rubrics' && <RubricManagement rubrics={rubrics} />}
+          {activeView === 'results' && <EvaluationResults teams={teams} projects={projects} />}
+          {activeView === 'settings' && <SettingsManagement settings={loginSettings} />}
+        </div>
+      </div>
+    );
+  }
+
+  // Vista principal del dashboard
   return (
-    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
+    <div className="space-y-6 p-4 md:p-6">
+      {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-500 to-accent bg-clip-text text-transparent">
           Manager Dashboard
         </h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Oversee teams, schedule, and projects for the AIDevChallenge 2025.
+        <p className="text-base md:text-lg text-muted-foreground">
+          AIDevChallenge 2025 - Central Command Center
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* Mobile: Select Dropdown */}
-        <div className="md:hidden mb-4">
-          <Select value={activeTab} onValueChange={setActiveTab}>
-            <SelectTrigger className="w-full h-12 text-base">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tabItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SelectItem key={item.value} value={item.value} className="text-base py-3">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5" />
-                      <span>{item.label}</span>
+      {/* Navigation Grid */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Settings className="h-5 w-5" />
+          Management Modules
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card 
+                key={item.id}
+                className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden border-2 hover:border-primary/50"
+                onClick={() => setActiveView(item.id)}
+              >
+                <div className={`h-2 bg-gradient-to-r ${item.color}`} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <div className={`p-3 rounded-lg bg-gradient-to-br ${item.color} shadow-lg`}>
+                      <Icon className="h-6 w-6 text-white" />
                     </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+                    <span className="group-hover:text-primary transition-colors">
+                      {item.label}
+                    </span>
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    {item.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
-
-        {/* Desktop: Tabs */}
-        <TabsList className="hidden md:grid w-full grid-cols-9 h-12 mb-6">
-          <TabsTrigger value="teams" className="h-full">
-            <Users className="mr-2 h-5 w-5" />
-            Team Assignments
-          </TabsTrigger>
-           <TabsTrigger value="teams-crud" className="h-full">
-            <Briefcase className="mr-2 h-5 w-5" />
-            Team Administration
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="h-full">
-            <Calendar className="mr-2 h-5 w-5" />
-            Schedule
-          </TabsTrigger>
-          <TabsTrigger value="projects" className="h-full">
-            <FolderKanban className="mr-2 h-5 w-5" />
-            Projects
-          </TabsTrigger>
-          <TabsTrigger value="activities" className="h-full">
-            <ListChecks className="mr-2 h-5 w-5" />
-            Activities
-          </TabsTrigger>
-          <TabsTrigger value="groups" className="h-full">
-            <Group className="mr-2 h-5 w-5" />
-            Groups
-          </TabsTrigger>
-          <TabsTrigger value="rubrics" className="h-full">
-            <FileCheck className="mr-2 h-5 w-5" />
-            Rubrics
-          </TabsTrigger>
-          <TabsTrigger value="results" className="h-full">
-            <Trophy className="mr-2 h-5 w-5" />
-            Results
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="h-full">
-            <Settings className="mr-2 h-5 w-5" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="teams" className="mt-0">
-            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} rubrics={rubrics} />
-        </TabsContent>
-        <TabsContent value="teams-crud" className="mt-0">
-          <TeamCrudManagement teams={teams} users={users} />
-        </TabsContent>
-        <TabsContent value="schedule" className="mt-0">
-            <ScheduleManagement schedule={schedule} days={days} />
-        </TabsContent>
-        <TabsContent value="projects" className="mt-0">
-            <ProjectManagement projects={projects} />
-        </TabsContent>
-        <TabsContent value="activities" className="mt-0">
-            <ActivityManagement activities={activities} />
-        </TabsContent>
-        <TabsContent value="groups" className="mt-0">
-            <GroupManagement groups={groups} users={users} />
-        </TabsContent>
-        <TabsContent value="rubrics" className="mt-0">
-            <RubricManagement rubrics={rubrics} />
-        </TabsContent>
-        <TabsContent value="results" className="mt-0">
-            <EvaluationResults teams={teams} projects={projects} />
-        </TabsContent>
-        <TabsContent value="settings" className="mt-0">
-            <SettingsManagement settings={loginSettings} />
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }
