@@ -766,12 +766,13 @@ export const getAllEvaluations = async (): Promise<Evaluation[]> => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
 };
 
-export const getEvaluation = async (teamId: string, projectId: string): Promise<Evaluation | null> => {
+export const getEvaluation = async (teamId: string, projectId: string, evaluatorUid: string): Promise<Evaluation | null> => {
   if (!db) return null;
   const q = query(
     collection(db, 'evaluations'),
     where('teamId', '==', teamId),
     where('projectId', '==', projectId),
+    where('evaluatorUid', '==', evaluatorUid),
     limit(1)
   );
   const snapshot = await getDocs(q);

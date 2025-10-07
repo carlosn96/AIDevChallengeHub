@@ -42,9 +42,9 @@ export default function EvaluationPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
-      if (!teamId || !db) {
+      if (!teamId || !user?.uid || !db) {
         if (isMounted) {
-          setError('Invalid team ID.');
+          setError('Invalid team ID or user not authenticated.');
           setIsLoading(false);
         }
         return;
@@ -82,7 +82,7 @@ export default function EvaluationPage() {
           setRubric(rubricData);
         }
 
-        const existingEvaluation = await getEvaluation(teamData.id, projectData.id);
+        const existingEvaluation = await getEvaluation(teamData.id, projectData.id, user.uid);
         if (isMounted) setEvaluation(existingEvaluation);
 
         const loadedScores: CriterionScoreState = {};
@@ -106,7 +106,7 @@ export default function EvaluationPage() {
 
     fetchData();
     return () => { isMounted = false; };
-  }, [teamId]);
+  }, [teamId, user?.uid]);
 
   const handleScoreSelect = (criterionId: string, scoreValue: number) => {
     setScores(prevScores => ({
@@ -163,7 +163,7 @@ export default function EvaluationPage() {
 
       await saveEvaluation(evaluationData);
       
-      const newEvaluation = await getEvaluation(team.id, project.id);
+      const newEvaluation = await getEvaluation(team.id, project.id, user.uid);
       setEvaluation(newEvaluation);
       setInitialScores({ ...scores });
 

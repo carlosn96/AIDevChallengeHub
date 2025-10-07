@@ -18,8 +18,8 @@ type TeamResult = {
   teamId: string;
   teamName: string;
   projectName: string;
-  totalScore: number;
-  evaluationId: string;
+  averageScore: number;
+  evaluationCount: number;
 };
 
 export default function EvaluationResults({ teams, projects }: EvaluationResultsProps) {
@@ -45,16 +45,26 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
   const projectsMap = useMemo(() => new Map(projects.map(p => [p.id, p.name])), [projects]);
 
   const teamResults = useMemo(() => {
-    return evaluations.map(ev => {
+    const resultsByTeam: { [teamId: string]: { totalScore: number; count: number; projectId: string } } = {};
+    
+    evaluations.forEach(ev => {
       const totalScore = ev.scores.reduce((sum, s) => sum + s.score, 0);
+      if (!resultsByTeam[ev.teamId]) {
+        resultsByTeam[ev.teamId] = { totalScore: 0, count: 0, projectId: ev.projectId };
+      }
+      resultsByTeam[ev.teamId].totalScore += totalScore;
+      resultsByTeam[ev.teamId].count += 1;
+    });
+
+    return Object.entries(resultsByTeam).map(([teamId, data]) => {
       return {
-        teamId: ev.teamId,
-        teamName: teamsMap.get(ev.teamId) || 'Unknown Team',
-        projectName: projectsMap.get(ev.projectId) || 'Unknown Project',
-        totalScore,
-        evaluationId: ev.id,
+        teamId: teamId,
+        teamName: teamsMap.get(teamId) || 'Unknown Team',
+        projectName: projectsMap.get(data.projectId) || 'Unknown Project',
+        averageScore: data.totalScore / data.count,
+        evaluationCount: data.count,
       };
-    }).sort((a, b) => b.totalScore - a.totalScore);
+    }).sort((a, b) => b.averageScore - a.averageScore);
   }, [evaluations, teamsMap, projectsMap]);
 
   const { topThree, ties } = useMemo(() => {
@@ -63,10 +73,11 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
     
     const scoreCounts: { [score: number]: TeamResult[] } = {};
     teamResults.forEach(result => {
-        if (!scoreCounts[result.totalScore]) {
-            scoreCounts[result.totalScore] = [];
+        const score = Math.round(result.averageScore * 100); // Use rounded score to avoid float inaccuracies
+        if (!scoreCounts[score]) {
+            scoreCounts[score] = [];
         }
-        scoreCounts[result.totalScore].push(result);
+        scoreCounts[score].push(result);
     });
 
     const ties = Object.values(scoreCounts).filter(group => group.length > 1);
@@ -116,7 +127,7 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Top 3 Teams</DialogTitle>
-                <DialogDescription>The highest scores from the evaluations.</DialogDescription>
+                <DialogDescription>The highest average scores from all evaluations.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 {topThree.length === 0 && <p className="text-center text-muted-foreground">No evaluations to rank yet.</p>}
@@ -128,8 +139,8 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
                       <p className="text-sm text-muted-foreground">Project: {team.projectName}</p>
                     </div>
                     <div className="text-right">
-                       <p className="text-2xl font-bold">{team.totalScore}</p>
-                       <p className="text-xs text-muted-foreground">Points</p>
+                       <p className="text-2xl font-bold">{team.averageScore.toFixed(2)}</p>
+                       <p className="text-xs text-muted-foreground">Avg Points</p>
                     </div>
                   </div>
                 ))}
@@ -142,7 +153,7 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
                     <div className="space-y-3">
                       {ties.map((tieGroup, index) => (
                         <div key={index} className="p-3 border rounded-lg">
-                          <p className="font-bold mb-2">Tied with {tieGroup[0].totalScore} points:</p>
+                          <p className="font-bold mb-2">Tied with an average of {tieGroup[0].averageScore.toFixed(2)} points:</p>
                           <ul className="list-disc list-inside text-sm text-muted-foreground">
                             {tieGroup.map(team => <li key={team.teamId}>{team.teamName}</li>)}
                           </ul>
@@ -153,7 +164,7 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
                 </>
               )}
               <DialogFooter>
-                  <p className="text-xs text-muted-foreground">Results based on {evaluations.length} completed evaluations.</p>
+                  <p className="text-xs text-muted-foreground">Results based on {evaluations.length} completed evaluations across all teams.</p>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -162,7 +173,7 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
       <CardContent>
          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {teamResults.map((result) => (
-            <Card key={result.evaluationId}>
+            <Card key={result.teamId}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-primary" />
@@ -172,8 +183,8 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
               </CardHeader>
               <CardContent>
                 <div className="text-center bg-muted p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Total Score</p>
-                    <p className="text-4xl font-bold">{result.totalScore}</p>
+                    <p className="text-sm text-muted-foreground">Average Score ({result.evaluationCount} eval{result.evaluationCount > 1 ? 's' : ''})</p>
+                    <p className="text-4xl font-bold">{result.averageScore.toFixed(2)}</p>
                 </div>
               </CardContent>
             </Card>
