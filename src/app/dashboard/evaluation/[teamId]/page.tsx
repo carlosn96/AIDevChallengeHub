@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,13 +46,16 @@ export default function EvaluationPage() {
     const schemaObject: { [key: string]: z.ZodType<any> } = {
       comments: z.string().optional(),
     };
+    const criteriaScores: { [key: string]: z.ZodNumber } = {};
     rubric.criteria.forEach(criterion => {
-      schemaObject[`scores.${criterion.id}`] = z.number({
+      criteriaScores[criterion.id] = z.number({
         required_error: `Score for "${criterion.name}" is required.`,
       }).min(0).max(5);
     });
+    schemaObject['scores'] = z.object(criteriaScores);
     return z.object(schemaObject);
   }, [rubric]);
+
 
   const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm({
     resolver: evaluationSchema ? zodResolver(evaluationSchema) : undefined,
@@ -131,7 +134,6 @@ export default function EvaluationPage() {
       return;
     }
     
-    // The resolver gives us `scores.${criterion.id}` keys, we need to transform it
     const scores = rubric.criteria.map(c => ({
         criterionId: c.id,
         score: data.scores[c.id]
@@ -151,7 +153,6 @@ export default function EvaluationPage() {
 
       const savedId = await saveEvaluation(evaluationData);
       
-      // Update local state after saving
       if (!evaluation) {
           const newEvaluation = await getEvaluation(team.id, project.id);
           setEvaluation(newEvaluation);
@@ -165,7 +166,7 @@ export default function EvaluationPage() {
 
 
       toast({ title: 'Evaluation Saved', description: 'Your evaluation has been successfully saved.' });
-       reset(data); // Resets the dirty state
+       reset(data); 
     } catch (e) {
       console.error(e);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to save evaluation.' });
@@ -274,7 +275,7 @@ export default function EvaluationPage() {
                       <Card className="border-none shadow-none p-0">
                         <CardHeader className="p-0">
                            <CardTitle className="text-lg">{criterion.name}</CardTitle>
-                           {errors.scores?.[criterion.id] && <p className="text-sm text-destructive">{errors.scores[criterion.id].message}</p>}
+                           {errors.scores?.[criterion.id] && <p className="text-sm text-destructive">{(errors.scores as any)[criterion.id].message}</p>}
                         </CardHeader>
                         <CardContent className="p-0 pt-4">
                           <Controller
@@ -345,7 +346,7 @@ export default function EvaluationPage() {
               </CardFooter>
             </form>
           </div>
-        </Grid>
+        </CardContent>
       </Card>
     </div>
   );

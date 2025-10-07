@@ -578,13 +578,11 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                       </AlertDialogContent>
                     </AlertDialog>
                     {teamDetails.projectId && teamDetails.rubricId && (
-                        <Link href={`/dashboard/evaluation/${teamDetails.id}`} legacyBehavior>
-                           <a target="_blank">
-                                <Button variant="outline" className="w-full sm:w-auto">
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Evaluate
-                                </Button>
-                           </a>
+                        <Link href={`/dashboard/evaluation/${teamDetails.id}`} target="_blank" passHref>
+                            <Button variant="outline" className="w-full sm:w-auto">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Evaluate
+                            </Button>
                         </Link>
                     )}
                 </div>
@@ -670,5 +668,7 @@ export default function TeamManagement({ teams, users, projects, activities, gro
     </>
   );
 }
+
+    
 
     

@@ -21,6 +21,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect } from 'react';
 import { Calendar, Edit, Users } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 function TeacherEvaluationList() {
     const [teams, setTeams] = useState<Team[]>([]);
@@ -52,7 +53,7 @@ function TeacherEvaluationList() {
             setTeams(fetchedTeams);
 
             if (projectIds.length > 0) {
-                 const projectsQuery = query(collection(db, 'projects'), where('__name__', 'in', projectIds));
+                 const projectsQuery = query(collection(db, 'projects'), where('__name__', 'in', [...new Set(projectIds)]));
                  onSnapshot(projectsQuery, (projSnapshot) => {
                      const projMap = new Map<string, Project>();
                      projSnapshot.forEach(doc => projMap.set(doc.id, { id: doc.id, ...doc.data()} as Project));
@@ -60,7 +61,7 @@ function TeacherEvaluationList() {
                  });
             }
              if (rubricIds.length > 0) {
-                 const rubricsQuery = query(collection(db, 'rubrics'), where('__name__', 'in', rubricIds));
+                 const rubricsQuery = query(collection(db, 'rubrics'), where('__name__', 'in', [...new Set(rubricIds)]));
                  onSnapshot(rubricsQuery, (rubricSnapshot) => {
                      const rubMap = new Map<string, Rubric>();
                      rubricSnapshot.forEach(doc => rubMap.set(doc.id, { id: doc.id, ...doc.data()} as Rubric));
@@ -96,7 +97,7 @@ function TeacherEvaluationList() {
                              </p>
                            </div>
                            <Link href={`/dashboard/evaluation/${team.id}`} passHref legacyBehavior>
-                                <a target="_blank">
+                                <a target="_blank" rel="noopener noreferrer">
                                     <Button variant="outline">
                                         <Edit className="mr-2 h-4 w-4" /> Evaluate
                                     </Button>
@@ -188,3 +189,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
