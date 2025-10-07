@@ -40,26 +40,27 @@ export default function EvaluationPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       if (!teamId || !db) {
-        setError('Invalid team ID.');
-        setIsLoading(false);
+        if (isMounted) {
+          setError('Invalid team ID.');
+          setIsLoading(false);
+        }
         return;
       }
 
       try {
         const teamDoc = await getDoc(doc(db, 'teams', teamId as string));
         if (!teamDoc.exists()) {
-          setError('Team not found.');
-          setIsLoading(false);
+          if (isMounted) setError('Team not found.');
           return;
         }
         const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-        setTeam(teamData);
+        if (isMounted) setTeam(teamData);
 
         if (!teamData.projectId || !teamData.rubricId) {
-          setError('This team does not have a project and/or rubric assigned.');
-          setIsLoading(false);
+          if (isMounted) setError('This team does not have a project and/or rubric assigned.');
           return;
         }
 
@@ -69,52 +70,49 @@ export default function EvaluationPage() {
         ]);
 
         if (!projectDoc.exists() || !rubricDoc.exists()) {
-          setError('Project or rubric not found.');
-          setIsLoading(false);
+          if (isMounted) setError('Project or rubric not found.');
           return;
         }
 
         const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
         const rubricData = { id: rubricDoc.id, ...rubricDoc.data() } as Rubric;
         
-        setProject(projectData);
-        setRubric(rubricData);
+        if (isMounted) {
+          setProject(projectData);
+          setRubric(rubricData);
+        }
 
         const existingEvaluation = await getEvaluation(teamData.id, projectData.id);
-        setEvaluation(existingEvaluation);
+        if (isMounted) setEvaluation(existingEvaluation);
 
         const loadedScores: CriterionScoreState = {};
-        if (existingEvaluation) {
-          rubricData.criteria.forEach(c => {
-            const foundScore = existingEvaluation.scores.find(s => s.criterionId === c.id);
-            loadedScores[c.id] = foundScore ? foundScore.score : null;
-          });
-        } else {
-            rubricData.criteria.forEach(c => {
-                loadedScores[c.id] = null;
-            });
-        }
+        rubricData.criteria.forEach(c => {
+          const foundScore = existingEvaluation?.scores.find(s => s.criterionId === c.id);
+          loadedScores[c.id] = foundScore ? foundScore.score : null;
+        });
         
-        setScores(loadedScores);
-        setInitialScores(loadedScores);
+        if (isMounted) {
+          setScores(loadedScores);
+          setInitialScores(loadedScores);
+        }
 
       } catch (e) {
         console.error(e);
-        setError('Error loading evaluation data.');
+        if (isMounted) setError('Error loading evaluation data.');
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchData();
+    return () => { isMounted = false; };
   }, [teamId]);
 
   const handleScoreSelect = (criterionId: string, scoreValue: number) => {
-    setScores(prevScores => {
-      const newScores = { ...prevScores };
-      newScores[criterionId] = scoreValue;
-      return newScores;
-    });
+    setScores(prevScores => ({
+      ...prevScores,
+      [criterionId]: scoreValue,
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -165,11 +163,8 @@ export default function EvaluationPage() {
 
       await saveEvaluation(evaluationData);
       
-      if (!evaluation) {
-        const newEvaluation = await getEvaluation(team.id, project.id);
-        setEvaluation(newEvaluation);
-      }
-
+      const newEvaluation = await getEvaluation(team.id, project.id);
+      setEvaluation(newEvaluation);
       setInitialScores({ ...scores });
 
       toast({ title: 'Evaluation Saved', description: 'Your evaluation has been saved successfully.' });
@@ -223,7 +218,7 @@ export default function EvaluationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:to-slate-900 py-8">
-      <div className="container mx-auto max-w-4xl px-4 space-y-8">
+      <div className="container mx-auto max-w-4xl px-4 space-y-8 pb-24">
         
         <div className="flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
@@ -336,36 +331,27 @@ export default function EvaluationPage() {
               </Accordion>
             </CardContent>
           </Card>
-
-          <Card className="shadow-xl border-2 border-blue-200 dark:border-blue-900">
-            <CardContent className="p-6">
-              <Button 
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !isDirty} 
-                className="w-full h-14 text-base font-bold shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                size="lg"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-5 w-5" /> Save Evaluation
-                  </>
-                )}
-              </Button>
-              {!isDirty && (
-                <p className="text-xs text-green-600 dark:text-green-400 flex items-center justify-center gap-2 mt-3">
-                  <Check className="h-4 w-4" />
-                  All changes saved
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
+      
+      {isDirty && (
+        <div className="fixed bottom-8 right-8 z-50">
+          <Button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting} 
+            className="w-16 h-16 rounded-full shadow-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center justify-center"
+            size="icon"
+          >
+            {isSubmitting ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+                <Save className="h-6 w-6" />
+            )}
+            <span className="sr-only">Save Evaluation</span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
