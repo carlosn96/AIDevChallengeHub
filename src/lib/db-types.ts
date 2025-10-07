@@ -16,6 +16,7 @@ export type Team = {
   name: string;
   memberIds: string[];
   projectId?: string;
+  rubricId?: string;
   activityIds?: string[];
   deliverables?: { [activityId: string]: string };
   memberCount: number;

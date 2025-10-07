@@ -544,6 +544,15 @@ export const assignProjectToTeam = async (teamId: string, projectId: string | nu
   });
 };
 
+export const assignRubricToTeam = async (teamId: string, rubricId: string | null) => {
+    if (!db) throw new Error("Firestore is not initialized.");
+    const teamRef = doc(db, 'teams', teamId);
+    await updateDoc(teamRef, {
+        rubricId: rubricId,
+        updatedAt: serverTimestamp(),
+    });
+};
+
 // Activity Actions
 export async function createActivity(data: { title: string; description?: string, product?: string }) {
   if (!db) throw new Error('Firebase not initialized');

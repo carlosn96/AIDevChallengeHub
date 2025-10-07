@@ -17,10 +17,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { type Team, type UserProfile, type Project, type Activity, type Group } from '@/lib/db-types';
-import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam } from '@/lib/user-actions';
+import { type Team, type UserProfile, type Project, type Activity, type Group, type Rubric } from '@/lib/db-types';
+import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam, assignRubricToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock, Link as LinkIcon } from 'lucide-react';
+import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock, Link as LinkIcon, FileCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -55,9 +55,10 @@ type TeamManagementProps = {
   projects: Project[];
   activities: Activity[];
   groups: Group[];
+  rubrics: Rubric[];
 };
 
-export default function TeamManagement({ teams, users, projects, activities, groups }: TeamManagementProps) {
+export default function TeamManagement({ teams, users, projects, activities, groups, rubrics }: TeamManagementProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -75,11 +76,17 @@ export default function TeamManagement({ teams, users, projects, activities, gro
   const usersMap = useMemo(() => new Map(users.map(u => [u.uid, u])), [users]);
   const projectsMap = useMemo(() => new Map(projects.map(p => [p.id, p])), [projects]);
   const groupsMap = useMemo(() => new Map(groups.map(g => [g.id, g])), [groups]);
+  const rubricsMap = useMemo(() => new Map(rubrics.map(r => [r.id, r])), [rubrics]);
 
   const projectOptions = useMemo(() => [
     { value: 'none', label: 'No project assigned' },
     ...projects.map(p => ({ value: p.id, label: p.name }))
   ], [projects]);
+  
+  const rubricOptions = useMemo(() => [
+    { value: 'none', label: 'No rubric assigned' },
+    ...rubrics.map(r => ({ value: r.id, label: r.name }))
+  ], [rubrics]);
 
   const teamOptions = useMemo(() => [
     { value: 'none', label: 'Unassign' },
@@ -101,6 +108,23 @@ export default function TeamManagement({ teams, users, projects, activities, gro
         title: 'Assignment Failed',
         description: 'There was an error assigning the project. Please try again.',
       });
+    }
+  };
+  
+  const handleRubricAssignment = async (teamId: string, rubricId: string) => {
+    try {
+        await assignRubricToTeam(teamId, rubricId === 'none' ? null : rubricId);
+        toast({
+            title: 'Rubric Assigned',
+            description: 'The team has been successfully assigned to the new rubric.',
+        });
+    } catch (error) {
+        console.error('Failed to assign rubric:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Assignment Failed',
+            description: 'There was an error assigning the rubric. Please try again.',
+        });
     }
   };
   
@@ -401,18 +425,33 @@ export default function TeamManagement({ teams, users, projects, activities, gro
               </DialogHeader>
               
               <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
-                {/* Project Assignment */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Assigned Project</label>
-                  <Combobox
-                    options={projectOptions}
-                    value={teamDetails.projectId || 'none'}
-                    onChange={(value) => handleProjectAssignment(teamDetails.id, value)}
-                    placeholder='Assign a project...'
-                    searchPlaceholder='Search project...'
-                    notFoundMessage='No project found.'
-                  />
+                {/* Project & Rubric Assignment */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Assigned Project</label>
+                    <Combobox
+                      options={projectOptions}
+                      value={teamDetails.projectId || 'none'}
+                      onChange={(value) => handleProjectAssignment(teamDetails.id, value)}
+                      placeholder='Assign a project...'
+                      searchPlaceholder='Search project...'
+                      notFoundMessage='No project found.'
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Evaluation Rubric</label>
+                    <Combobox
+                      options={rubricOptions}
+                      value={teamDetails.rubricId || 'none'}
+                      onChange={(value) => handleRubricAssignment(teamDetails.id, value)}
+                      placeholder='Assign a rubric...'
+                      searchPlaceholder='Search rubrics...'
+                      notFoundMessage='No rubrics found.'
+                      disabled={!teamDetails.projectId}
+                    />
+                  </div>
                 </div>
+
 
                 {/* Activities Section */}
                 <div className="space-y-2">

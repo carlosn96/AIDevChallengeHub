@@ -195,7 +195,7 @@ export default function ManagerDashboard() {
         </TabsList>
         
         <TabsContent value="teams" className="mt-0">
-            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} />
+            <TeamManagement teams={teams} users={users} projects={projects} activities={activities} groups={groups} rubrics={rubrics} />
         </TabsContent>
         <TabsContent value="teams-crud" className="mt-0">
           <TeamCrudManagement teams={teams} users={users} />
