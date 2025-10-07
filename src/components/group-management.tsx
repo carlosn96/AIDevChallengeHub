@@ -54,7 +54,8 @@ import {
   Group as GroupIcon,
   MoreVertical,
   Users,
-  UserPlus
+  UserPlus,
+  Download
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -99,6 +100,10 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
     return map;
   }, [users]);
   
+  const groupsMap = useMemo(() => {
+    return new Map(groups.map(g => [g.id, g.name]));
+  }, [groups]);
+
   const groupOptions = useMemo(() => [
     { value: 'none', label: 'No Group' },
     ...groups.map(g => ({ value: g.id, label: g.name }))
@@ -183,23 +188,53 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
     }
   };
 
+  const handleDownload = () => {
+    const studentUsers = users.filter(user => user.role === 'Student');
+    
+    let csvContent = "data:text/csv;charset=utf-8,Student Name,Email,Group Name\n";
+    
+    studentUsers.forEach(user => {
+      const groupName = user.groupId ? (groupsMap.get(user.groupId) || 'N/A') : 'Unassigned';
+      const row = [
+        `"${user.displayName || ''}"`,
+        `"${user.email || ''}"`,
+        `"${groupName}"`
+      ].join(',');
+      csvContent += row + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "student_groups.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Groups</h2>
           <p className="text-muted-foreground text-sm mt-1">
             {groups.length} {groups.length === 1 ? 'group available' : 'groups available'}
           </p>
         </div>
-        <Button 
-          onClick={handleCreateClick}
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          New Group
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button onClick={handleDownload} variant="outline" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Download List
+          </Button>
+          <Button 
+            onClick={handleCreateClick}
+            className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity w-full sm:w-auto"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Group
+          </Button>
+        </div>
       </div>
 
       {groups.length === 0 ? (
@@ -462,3 +497,5 @@ export default function GroupManagement({ groups, users }: GroupManagementProps)
     </div>
   );
 }
+
+    
