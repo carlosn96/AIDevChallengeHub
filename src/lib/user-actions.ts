@@ -828,15 +828,18 @@ export const getEvaluation = async (teamId: string, projectId: string): Promise<
 export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> => {
   if (!db) throw new Error("Firestore not initialized");
 
+  // Destructure to separate the optional 'id' from the rest of the data
+  const { id, ...data } = evaluationData;
+
   const dataToSave = {
-    ...evaluationData,
+    ...data,
     updatedAt: serverTimestamp(),
   };
 
-  if (evaluationData.id) {
-    const evalRef = doc(db, 'evaluations', evaluationData.id);
+  if (id) {
+    const evalRef = doc(db, 'evaluations', id);
     await updateDoc(evalRef, dataToSave);
-    return evaluationData.id;
+    return id;
   } else {
     const evalRef = collection(db, 'evaluations');
     const newDoc = await addDoc(evalRef, {
