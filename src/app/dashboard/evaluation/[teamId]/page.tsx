@@ -98,7 +98,7 @@ export default function EvaluationPage() {
         }
         
         setScores(loadedScores);
-        setInitialScores(loadedScores);
+        setInitialScores(JSON.parse(JSON.stringify(loadedScores)));
 
       } catch (e) {
         console.error(e);
@@ -123,11 +123,10 @@ export default function EvaluationPage() {
         return;
     }
 
-    setScores(prevScores => {
-        const newScores = { ...prevScores };
-        newScores[criterionId] = score;
-        return newScores;
-    });
+    setScores(prevScores => ({
+        ...prevScores,
+        [criterionId]: score,
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -188,7 +187,7 @@ export default function EvaluationPage() {
       
       const newEvaluation = await getEvaluation(team.id, project.id);
       setEvaluation(newEvaluation);
-      setInitialScores({ ...scores });
+      setInitialScores(JSON.parse(JSON.stringify(scores)));
 
       toast({ title: 'Evaluación Guardada', description: 'Tu evaluación se ha guardado exitosamente.' });
     } catch (e) {
