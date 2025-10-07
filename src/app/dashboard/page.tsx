@@ -32,20 +32,20 @@ function TeacherEvaluationList() {
     useEffect(() => {
         if (!db) return;
 
-        const teamsQuery = query(
-            collection(db, 'teams'),
-            where('projectId', '!=', null),
-            where('rubricId', '!=', null)
-        );
+        const teamsQuery = query(collection(db, 'teams'));
 
         const unsubTeams = onSnapshot(teamsQuery, (snapshot) => {
-            const fetchedTeams: Team[] = [];
+            const allTeams: Team[] = [];
+            snapshot.forEach(doc => {
+                allTeams.push({ id: doc.id, ...doc.data() } as Team);
+            });
+            
+            const fetchedTeams = allTeams.filter(team => team.projectId && team.rubricId);
+
             const projectIds: string[] = [];
             const rubricIds: string[] = [];
 
-            snapshot.forEach(doc => {
-                const team = { id: doc.id, ...doc.data() } as Team;
-                fetchedTeams.push(team);
+            fetchedTeams.forEach(team => {
                 if (team.projectId) projectIds.push(team.projectId);
                 if (team.rubricId) rubricIds.push(team.rubricId);
             });
