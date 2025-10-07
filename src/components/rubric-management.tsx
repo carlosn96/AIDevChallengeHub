@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { type Rubric, type RubricCriterion } from '@/lib/db-types';
-import { createRubric, updateRubric, deleteRubric, TEMPORARY_migrateRubricIds } from '@/lib/user-actions';
-import { FileCheck, Plus, Trash2, Edit, Loader2, X, AlertCircle, Eye, DatabaseZap } from 'lucide-react';
+import { createRubric, updateRubric, deleteRubric } from '@/lib/user-actions';
+import { FileCheck, Plus, Trash2, Edit, Loader2, X, AlertCircle, Eye } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
@@ -42,7 +42,6 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
   const [editingRubric, setEditingRubric] = useState<Rubric | null>(null);
   const [viewingRubric, setViewingRubric] = useState<Rubric | null>(null);
 
@@ -104,26 +103,6 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
     }
   };
 
-  const handleMigration = async () => {
-    setIsMigrating(true);
-    try {
-      const result = await TEMPORARY_migrateRubricIds();
-      toast({
-        title: 'Migration Complete',
-        description: `Updated ${result.rubricsUpdated} rubrics and ${result.evaluationsUpdated} evaluations.`,
-      });
-    } catch (error) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Migration Failed',
-        description: 'An error occurred during data migration.',
-      });
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-
   return (
     <>
       <Card>
@@ -144,17 +123,6 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <Alert variant="destructive" className="mb-4">
-            <DatabaseZap className="h-4 w-4" />
-            <AlertTitle>Temporary Data Migration</AlertTitle>
-            <div className="flex justify-between items-center">
-              <p>Click to fix unique ID issues in existing rubrics.</p>
-              <Button onClick={handleMigration} disabled={isMigrating} size="sm">
-                {isMigrating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <DatabaseZap className="mr-2 h-4 w-4" />}
-                {isMigrating ? 'Migrating...' : 'Run Migration'}
-              </Button>
-            </div>
-          </Alert>
           {rubrics.length === 0 ? (
             <div className="text-center py-12">
               <FileCheck className="mx-auto h-12 w-12 text-muted-foreground" />

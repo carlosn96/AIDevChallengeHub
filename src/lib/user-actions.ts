@@ -23,60 +23,6 @@ import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day
 import { type UserRole, getUserRole } from './roles';
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * TEMPORARY MIGRATION FUNCTION
- * Updates all criteria in all rubrics to have unique IDs.
- * This also updates corresponding evaluations to use the new criterion IDs.
- */
-export const TEMPORARY_migrateRubricIds = async (): Promise<{rubricsUpdated: number, evaluationsUpdated: number}> => {
-  if (!db) throw new Error("Firestore is not initialized.");
-  
-  const rubricsRef = collection(db, 'rubrics');
-  const rubricsSnapshot = await getDocs(rubricsRef);
-  let rubricsUpdated = 0;
-  let evaluationsUpdated = 0;
-
-  for (const rubricDoc of rubricsSnapshot.docs) {
-    const rubric = { id: rubricDoc.id, ...rubricDoc.data() } as Rubric;
-    const idMap = new Map<string, string>(); // Maps old ID to new ID
-
-    // Force update all criteria IDs without validation
-    const updatedCriteria = rubric.criteria.map(criterion => {
-      const newId = uuidv4();
-      idMap.set(criterion.id, newId);
-      return { ...criterion, id: newId };
-    });
-
-    const batch = writeBatch(db);
-
-    // 1. Update the rubric itself with the new criteria IDs
-    batch.update(rubricDoc.ref, { criteria: updatedCriteria });
-    rubricsUpdated++;
-
-    // 2. Find and update all evaluations that use this rubric
-    const evaluationsQuery = query(collection(db, 'evaluations'), where('rubricId', '==', rubric.id));
-    const evaluationsSnapshot = await getDocs(evaluationsQuery);
-
-    evaluationsSnapshot.forEach(evalDoc => {
-      const evaluation = evalDoc.data() as Evaluation;
-      const updatedScores = evaluation.scores.map(score => {
-        const newCriterionId = idMap.get(score.criterionId);
-        // Use the new ID if a mapping exists, otherwise keep the old one (fallback, though all should be mapped)
-        return newCriterionId ? { ...score, criterionId: newCriterionId } : score;
-      });
-      batch.update(evalDoc.ref, { scores: updatedScores });
-      evaluationsUpdated++;
-    });
-    
-    await batch.commit();
-    console.log(`Force-migrated rubric ${rubric.id} and its ${evaluationsSnapshot.size} evaluations.`);
-  }
-
-  console.log(`Migration complete. Updated ${rubricsUpdated} rubrics and ${evaluationsUpdated} evaluations.`);
-  return { rubricsUpdated, evaluationsUpdated };
-};
-
-
 const MAX_TEAM_MEMBERS = 3;
 
 /**
