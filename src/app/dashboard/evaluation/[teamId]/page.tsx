@@ -57,7 +57,7 @@ export default function EvaluationPage() {
   }, [rubric]);
 
 
-  const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm({
+  const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: evaluationSchema ? zodResolver(evaluationSchema) : undefined,
     defaultValues: { scores: {}, comments: '' },
   });
@@ -103,7 +103,6 @@ export default function EvaluationPage() {
         const existingEvaluation = await getEvaluation(teamData.id, projectData.id);
         setEvaluation(existingEvaluation);
 
-        // Set form default values from existing evaluation or rubric
         const defaultScores: { [key: string]: number } = {};
         if (existingEvaluation) {
             existingEvaluation.scores.forEach(s => {
@@ -111,9 +110,6 @@ export default function EvaluationPage() {
             });
             reset({ scores: defaultScores, comments: existingEvaluation.comments || '' });
         } else {
-            rubricData.criteria.forEach(c => {
-                // You may want to set a default score, e.g., -1 to indicate not scored
-            });
             reset({ scores: {}, comments: '' });
         }
 
@@ -128,7 +124,7 @@ export default function EvaluationPage() {
     fetchData();
   }, [teamId, reset]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     if (!team || !project || !rubric || !user || !evaluationSchema) {
       toast({ variant: 'destructive', title: 'Error', description: 'Missing required data to save evaluation.' });
       return;
@@ -141,7 +137,7 @@ export default function EvaluationPage() {
 
     setIsSubmitting(true);
     try {
-      const evaluationData = {
+      const evaluationData: Partial<Evaluation> & Pick<Evaluation, 'teamId' | 'projectId' | 'rubricId' | 'evaluatorUid' | 'scores' | 'comments'> = {
         id: evaluation?.id,
         teamId: team.id,
         projectId: project.id,
@@ -161,9 +157,8 @@ export default function EvaluationPage() {
               ...prev,
               ...evaluationData,
               id: savedId,
-          } : null);
+          } as Evaluation : null);
       }
-
 
       toast({ title: 'Evaluation Saved', description: 'Your evaluation has been successfully saved.' });
        reset(data); 
@@ -210,144 +205,208 @@ export default function EvaluationPage() {
   const totalScore = rubric.criteria.reduce((acc, crit) => acc + (control._formValues.scores[crit.id] ?? 0), 0);
   const maxScore = rubric.criteria.length * 5;
   const averageScore = totalScore / rubric.criteria.length || 0;
-
+  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+  const evaluatedCount = Object.values(control._formValues.scores || {}).filter(s => s !== undefined).length;
+  const pendingCount = rubric.criteria.length - evaluatedCount;
 
   return (
-    <div className="container mx-auto max-w-6xl py-8 px-4 space-y-6">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-      </Button>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      <div className="container mx-auto max-w-7xl p-4 space-y-4">
+        {/* Header compacto con información clave */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-2">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
             <div>
-                <CardTitle className="text-2xl">Project Evaluation</CardTitle>
-                <CardDescription>Evaluate the team based on the assigned rubric.</CardDescription>
-            </div>
-            <div className="text-right">
-                <Badge variant="secondary" className="text-lg">
-                    Score: {totalScore.toFixed(0)} / {maxScore}
+              <h1 className="text-xl font-bold">Evaluación de Proyecto</h1>
+              <div className="flex items-center gap-3 mt-1">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {team.name}
                 </Badge>
-                <p className="text-sm text-muted-foreground mt-1">
-                    Average: {averageScore.toFixed(2)}
-                </p>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {project.name}
+                </Badge>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg"><Users className="h-5 w-5 text-primary" />Team</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="font-semibold text-xl">{team.name}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg"><FileText className="h-5 w-5 text-primary" />Project</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="font-semibold text-xl">{project.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-              </CardContent>
-            </Card>
-             <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Evaluation Instructions</AlertTitle>
-                <AlertDescription>
-                    For each criterion, select a score from 0 to 5. Your progress is saved automatically when you click "Save Evaluation".
-                </AlertDescription>
-            </Alert>
+          
+          {/* Score prominente */}
+          <div className="text-right">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-primary">{totalScore.toFixed(0)}</span>
+              <span className="text-2xl text-muted-foreground">/ {maxScore}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="h-2 w-32 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">{percentage.toFixed(0)}%</span>
+            </div>
           </div>
-          <div className="md:col-span-2">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Rubric: {rubric.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {rubric.criteria.map((criterion, index) => (
-                    <div key={criterion.id}>
-                      <Separator className={index > 0 ? "mb-6" : "hidden"} />
-                      <Card className="border-none shadow-none p-0">
-                        <CardHeader className="p-0">
-                           <CardTitle className="text-lg">{criterion.name}</CardTitle>
-                           {errors.scores?.[criterion.id] && <p className="text-sm text-destructive">{(errors.scores as any)[criterion.id].message}</p>}
-                        </CardHeader>
-                        <CardContent className="p-0 pt-4">
-                          <Controller
-                            name={`scores.${criterion.id}`}
-                            control={control}
-                            render={({ field }) => (
-                              <RadioGroup
-                                onValueChange={(value) => field.onChange(parseInt(value))}
-                                value={field.value !== undefined ? String(field.value) : ''}
-                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
-                              >
-                                {criterion.descriptions.map((desc, score) => (
-                                  <div key={score} className="flex-1">
-                                    <RadioGroupItem value={String(score)} id={`${criterion.id}-${score}`} className="peer sr-only" />
-                                    <Label
-                                      htmlFor={`${criterion.id}-${score}`}
-                                      className="flex flex-col rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                                    >
-                                      <Badge variant="outline" className="w-fit mb-2">Score: {score}</Badge>
-                                      <span className="text-sm text-muted-foreground">{desc}</span>
-                                    </Label>
-                                  </div>
-                                ))}
-                              </RadioGroup>
-                            )}
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+        </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Comments</CardTitle>
-                  <CardDescription>Provide overall feedback or justification for the scores.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Controller
-                    name="comments"
-                    control={control}
-                    render={({ field }) => (
-                      <Textarea {...field} rows={5} placeholder="Your comments..." />
+        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Columna izquierda: Criterios */}
+          <div className="space-y-4">
+            <Card className="shadow-lg border-2">
+              <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/30">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="h-8 w-1 bg-primary rounded-full"></div>
+                  {rubric.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                {rubric.criteria.map((criterion, index) => (
+                  <div key={criterion.id} className="space-y-2">
+                    {index > 0 && <Separator className="my-4" />}
+                    
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-base flex-1">{criterion.name}</h3>
+                      <Badge variant={control._formValues.scores[criterion.id] !== undefined ? "default" : "secondary"} className="shrink-0">
+                        {control._formValues.scores[criterion.id] !== undefined ? control._formValues.scores[criterion.id] : '—'} / 5
+                      </Badge>
+                    </div>
+                    
+                    {errors.scores?.[criterion.id] && (
+                      <p className="text-xs text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {(errors.scores as any)[criterion.id].message}
+                      </p>
                     )}
-                  />
-                </CardContent>
-              </Card>
-                
-              <CardFooter className="px-0">
-                <Button type="submit" disabled={isSubmitting || !isDirty} className="w-full sm:w-auto">
+                    
+                    <Controller
+                      name={`scores.${criterion.id}`}
+                      control={control}
+                      render={({ field }) => (
+                        <RadioGroup
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value !== undefined ? String(field.value) : ''}
+                          className="grid grid-cols-6 gap-2"
+                        >
+                          {criterion.descriptions.map((desc, score) => {
+                            const radioId = `${criterion.id}-${score}`;
+                            return (
+                              <div key={score}>
+                                <RadioGroupItem 
+                                  value={String(score)} 
+                                  id={radioId} 
+                                  className="peer sr-only" 
+                                />
+                                <Label
+                                  htmlFor={radioId}
+                                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-white dark:bg-slate-900 p-3 hover:bg-primary/5 hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all group relative h-20"
+                                  title={desc}
+                                >
+                                  <span className="text-2xl font-bold text-primary group-hover:scale-110 transition-transform">{score}</span>
+                                  <span className="text-[10px] text-center text-muted-foreground line-clamp-2 mt-1">{desc}</span>
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </RadioGroup>
+                      )}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Columna derecha: Comentarios y acciones */}
+          <div className="space-y-4">
+            <Card className="shadow-lg border-2">
+              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+                <CardTitle className="text-lg">Comentarios y Retroalimentación</CardTitle>
+                <CardDescription className="text-xs">Proporciona contexto adicional para tu evaluación</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <Controller
+                  name="comments"
+                  control={control}
+                  render={({ field }) => (
+                    <Textarea 
+                      {...field} 
+                      rows={8}
+                      placeholder="Escribe tus observaciones generales, fortalezas del equipo, áreas de mejora..."
+                      className="resize-none text-sm"
+                    />
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Información del proyecto */}
+            <Card className="shadow-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  Descripción del Proyecto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
+              </CardContent>
+            </Card>
+
+            {/* Resumen de progreso */}
+            <Card className="shadow-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Progreso de Evaluación</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">{evaluatedCount}</div>
+                    <div className="text-xs text-muted-foreground">Evaluados</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
+                    <div className="text-xs text-muted-foreground">Pendientes</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">{averageScore.toFixed(1)}</div>
+                    <div className="text-xs text-muted-foreground">Promedio</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Botón de guardar destacado */}
+            <Card className="shadow-lg border-2 border-primary/20">
+              <CardContent className="pt-6">
+                <Button 
+                  type="submit"
+                  disabled={isSubmitting || !isDirty} 
+                  className="w-full h-12 text-base font-semibold shadow-lg"
+                  size="lg"
+                >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Guardando...
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-4 w-4" /> Save Evaluation
+                      <Save className="mr-2 h-5 w-5" /> Guardar Evaluación
                     </>
                   )}
                 </Button>
                 {!isDirty && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-2 ml-4">
-                        <Check className="h-4 w-4 text-green-500" />
-                        All changes saved
-                    </p>
+                  <p className="text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-2 mt-3">
+                    <Check className="h-4 w-4" />
+                    Todos los cambios guardados
+                  </p>
                 )}
-              </CardFooter>
-            </form>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </form>
+      </div>
     </div>
   );
 }
