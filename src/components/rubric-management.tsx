@@ -46,7 +46,7 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
 
   const form = useForm<z.infer<typeof rubricFormSchema>>({
     resolver: zodResolver(rubricFormSchema),
-    defaultValues: { name: '', criteria: [{ id: uuidv4(), name: '', descriptions: defaultDescriptions }] },
+    defaultValues: { name: '', criteria: [] },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -60,7 +60,8 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
       form.reset({ name: rubric.name, criteria: rubric.criteria });
     } else {
       setEditingRubric(null);
-      form.reset({ name: '', criteria: [{ id: uuidv4(), name: '', descriptions: defaultDescriptions }] });
+      // Ensure a fresh default criterion with a unique ID is created each time
+      form.reset({ name: '', criteria: [{ id: uuidv4(), name: '', descriptions: [...defaultDescriptions] }] });
     }
     setIsFormDialogOpen(true);
   };
@@ -257,7 +258,7 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  append({ id: uuidv4(), name: '', descriptions: defaultDescriptions })
+                  append({ id: uuidv4(), name: '', descriptions: [...defaultDescriptions] })
                 }
               >
                 <Plus className="mr-2 h-4 w-4" /> Add Criterion
