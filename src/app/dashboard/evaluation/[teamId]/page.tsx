@@ -16,7 +16,6 @@ import { ArrowLeft, Check, Loader2, Save, Users, AlertTriangle, Award } from 'lu
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type CriterionScoreState = {
@@ -86,13 +85,17 @@ export default function EvaluationPage() {
         setEvaluation(existingEvaluation);
 
         const loadedScores: CriterionScoreState = {};
+        // First, initialize all scores from the rubric to null
         rubricData.criteria.forEach(c => {
-            loadedScores[c.id] = null; // Initialize all scores to null
+            loadedScores[c.id] = null;
         });
 
+        // Then, if an evaluation exists, populate the scores
         if (existingEvaluation) {
           existingEvaluation.scores.forEach(s => {
-            loadedScores[s.criterionId] = s.score;
+            if (loadedScores.hasOwnProperty(s.criterionId)) {
+                loadedScores[s.criterionId] = s.score;
+            }
           });
         }
         
@@ -233,7 +236,7 @@ export default function EvaluationPage() {
   const averageScore = rubric.criteria.length > 0 ? totalScore / rubric.criteria.length : 0;
   
   const evaluatedCount = Object.values(scores).filter(s => s !== null).length;
-  const progressPercentage = (evaluatedCount / rubric.criteria.length) * 100;
+  const progressPercentage = rubric.criteria.length > 0 ? (evaluatedCount / rubric.criteria.length) * 100 : 0;
   const isDirty = hasChanges();
 
   return (
