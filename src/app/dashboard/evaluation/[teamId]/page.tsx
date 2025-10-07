@@ -1,66 +1,43 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useSettings } from '@/context/settings-context';
-import { type Team, type Project, type Rubric, type UserProfile, type Evaluation } from '@/lib/db-types';
+import { type Team, type Project, type Rubric, type Evaluation } from '@/lib/db-types';
 import { saveEvaluation, getEvaluation } from '@/lib/user-actions';
 import { LoadingScreen } from '@/components/loading-screen';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Check, Edit, FileText, Loader2, Save, Users, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Save, Users, AlertTriangle, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 
-type FormData = {
-  scores: { [criterionId: string]: number };
-  comments: string;
+type CriterionScoreState = {
+  [criterionId: string]: number | null;
 };
 
 export default function EvaluationPage() {
   const { teamId } = useParams();
   const router = useRouter();
-  const { user, role } = useSettings();
+  const { user } = useSettings();
   const { toast } = useToast();
 
   const [team, setTeam] = useState<Team | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  
+  const [scores, setScores] = useState<CriterionScoreState>({});
+  const [initialScores, setInitialScores] = useState<CriterionScoreState>({});
+  const [currentCriterionIndex, setCurrentCriterionIndex] = useState(0);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const evaluationSchema = useMemo(() => {
-    if (!rubric) return null;
-    const schemaObject: { [key: string]: z.ZodType<any> } = {
-      comments: z.string().optional(),
-    };
-    const criteriaScores: { [key: string]: z.ZodNumber } = {};
-    rubric.criteria.forEach(criterion => {
-      criteriaScores[criterion.id] = z.number({
-        required_error: `Score for "${criterion.name}" is required.`,
-      }).min(0).max(5);
-    });
-    schemaObject['scores'] = z.object(criteriaScores);
-    return z.object(schemaObject);
-  }, [rubric]);
-
-
-  const { control, handleSubmit, reset, formState: { errors, isDirty } } = useForm<FormData>({
-    resolver: evaluationSchema ? zodResolver(evaluationSchema) : undefined,
-    defaultValues: { scores: {}, comments: '' },
-  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,92 +58,136 @@ export default function EvaluationPage() {
         setTeam(teamData);
 
         if (!teamData.projectId || !teamData.rubricId) {
-          setError('This team does not have a project and/or a rubric assigned for evaluation.');
+          setError('Este equipo no tiene un proyecto y/o rúbrica asignados.');
           setIsLoading(false);
           return;
         }
 
-        const projectDoc = await getDoc(doc(db, 'projects', teamData.projectId));
-        const rubricDoc = await getDoc(doc(db, 'rubrics', teamData.rubricId));
+        const [projectDoc, rubricDoc] = await Promise.all([
+          getDoc(doc(db, 'projects', teamData.projectId)),
+          getDoc(doc(db, 'rubrics', teamData.rubricId))
+        ]);
 
         if (!projectDoc.exists() || !rubricDoc.exists()) {
-          setError('Assigned project or rubric not found.');
+          setError('Proyecto o rúbrica no encontrados.');
           setIsLoading(false);
           return;
         }
 
         const projectData = { id: projectDoc.id, ...projectDoc.data() } as Project;
         const rubricData = { id: rubricDoc.id, ...rubricDoc.data() } as Rubric;
+        
         setProject(projectData);
         setRubric(rubricData);
 
         const existingEvaluation = await getEvaluation(teamData.id, projectData.id);
         setEvaluation(existingEvaluation);
 
-        const defaultScores: { [key: string]: number } = {};
+        const loadedScores: CriterionScoreState = {};
         if (existingEvaluation) {
-            existingEvaluation.scores.forEach(s => {
-                defaultScores[s.criterionId] = s.score;
-            });
-            reset({ scores: defaultScores, comments: existingEvaluation.comments || '' });
-        } else {
-            reset({ scores: {}, comments: '' });
+          existingEvaluation.scores.forEach(s => {
+            loadedScores[s.criterionId] = s.score;
+          });
         }
+        
+        setScores(loadedScores);
+        setInitialScores(loadedScores);
 
       } catch (e) {
         console.error(e);
-        setError('Failed to load evaluation data.');
+        setError('Error al cargar los datos de evaluación.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [teamId, reset]);
+  }, [teamId]);
 
-  const onSubmit = async (data: FormData) => {
-    if (!team || !project || !rubric || !user || !evaluationSchema) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Missing required data to save evaluation.' });
+  const handleScoreSelect = (criterionId: string, scoreValue: number) => {
+    setScores(prevScores => ({
+      ...prevScores,
+      [criterionId]: scoreValue,
+    }));
+  };
+
+  const validateForm = (): boolean => {
+    if (!rubric) return false;
+    
+    for (const criterion of rubric.criteria) {
+      if (scores[criterion.id] === null || scores[criterion.id] === undefined) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Evaluación Incompleta', 
+          description: `Por favor califica: ${criterion.name}` 
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const hasChanges = (): boolean => {
+    if (!rubric) return false;
+    
+    for (const criterion of rubric.criteria) {
+      if (scores[criterion.id] !== initialScores[criterion.id]) return true;
+    }
+    return false;
+  };
+
+  const handleSubmit = async () => {
+    if (!team || !project || !rubric || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Datos requeridos faltantes.' });
       return;
     }
-    
-    const scores = rubric.criteria.map(c => ({
-        criterionId: c.id,
-        score: data.scores[c.id]
-    }));
+
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
     try {
-      const evaluationData: Partial<Evaluation> & Pick<Evaluation, 'teamId' | 'projectId' | 'rubricId' | 'evaluatorUid' | 'scores' | 'comments'> = {
+      const evaluationScores = rubric.criteria.map(c => ({
+        criterionId: c.id,
+        score: scores[c.id] ?? 0
+      }));
+
+      const evaluationData = {
         id: evaluation?.id,
         teamId: team.id,
         projectId: project.id,
         rubricId: rubric.id,
         evaluatorUid: user.uid,
-        scores: scores,
-        comments: data.comments,
+        scores: evaluationScores,
+        comments: '',
       };
 
-      const savedId = await saveEvaluation(evaluationData);
+      await saveEvaluation(evaluationData);
       
       if (!evaluation) {
-          const newEvaluation = await getEvaluation(team.id, project.id);
-          setEvaluation(newEvaluation);
-      } else {
-          setEvaluation(prev => prev ? {
-              ...prev,
-              ...evaluationData,
-              id: savedId,
-          } as Evaluation : null);
+        const newEvaluation = await getEvaluation(team.id, project.id);
+        setEvaluation(newEvaluation);
       }
 
-      toast({ title: 'Evaluation Saved', description: 'Your evaluation has been successfully saved.' });
-       reset(data); 
+      setInitialScores({ ...scores });
+
+      toast({ title: 'Evaluación Guardada', description: 'Tu evaluación se ha guardado exitosamente.' });
     } catch (e) {
       console.error(e);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save evaluation.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar la evaluación.' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const goToNextCriterion = () => {
+    if (rubric && currentCriterionIndex < rubric.criteria.length - 1) {
+      setCurrentCriterionIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousCriterion = () => {
+    if (currentCriterionIndex > 0) {
+      setCurrentCriterionIndex(prev => prev - 1);
     }
   };
   
@@ -174,14 +195,14 @@ export default function EvaluationPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 max-w-2xl mt-8">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-         <Button onClick={() => router.back()} className="mt-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        <Button onClick={() => router.back()} className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
       </div>
     );
@@ -189,201 +210,230 @@ export default function EvaluationPage() {
 
   if (!team || !project || !rubric) {
     return (
-        <div className="container mx-auto p-4">
-            <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Missing Data</AlertTitle>
-                <AlertDescription>Could not load all necessary information for evaluation.</AlertDescription>
-            </Alert>
-            <Button onClick={() => router.back()} className="mt-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-        </div>
+      <div className="container mx-auto p-4 max-w-2xl mt-8">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Datos Faltantes</AlertTitle>
+          <AlertDescription>No se pudo cargar la información necesaria.</AlertDescription>
+        </Alert>
+        <Button onClick={() => router.back()} className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
+      </div>
     );
   }
   
-  const totalScore = rubric.criteria.reduce((acc, crit) => acc + (control._formValues.scores[crit.id] ?? 0), 0);
+  const totalScore = rubric.criteria.reduce((acc, crit) => acc + (scores[crit.id] ?? 0), 0);
   const maxScore = rubric.criteria.length * 5;
-  const averageScore = totalScore / rubric.criteria.length || 0;
-  const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
-  const evaluatedCount = Object.values(control._formValues.scores || {}).filter(s => s !== undefined).length;
-  const pendingCount = rubric.criteria.length - evaluatedCount;
+  const averageScore = rubric.criteria.length > 0 ? totalScore / rubric.criteria.length : 0;
+  
+  const evaluatedCount = rubric.criteria.filter(crit => 
+    scores[crit.id] !== undefined && scores[crit.id] !== null
+  ).length;
+  const progressPercentage = (evaluatedCount / rubric.criteria.length) * 100;
+  const isDirty = hasChanges();
+
+  const currentCriterion = rubric.criteria[currentCriterionIndex];
+  const currentScore = scores[currentCriterion.id];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="container mx-auto max-w-7xl p-4 space-y-4">
-        {/* Header compacto con información clave */}
-        <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-lg shadow-md p-4 border-2">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">Evaluación de Proyecto</h1>
-              <div className="flex items-center gap-3 mt-1">
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {team.name}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  {project.name}
-                </Badge>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:to-slate-900 py-8">
+      <div className="container mx-auto max-w-6xl px-4 space-y-8">
+        
+        {/* Header Compacto */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Button>
           
-          {/* Score prominente */}
-          <div className="text-right">
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-primary">{totalScore.toFixed(0)}</span>
-              <span className="text-2xl text-muted-foreground">/ {maxScore}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="h-2 w-32 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium text-muted-foreground">{percentage.toFixed(0)}%</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="px-3 py-1">
+              <Users className="h-3 w-3 mr-1" />
+              {team.name}
+            </Badge>
+            <span className="text-sm text-muted-foreground">evaluando</span>
+            <Badge variant="secondary" className="px-3 py-1 font-semibold">
+              {project.name}
+            </Badge>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Columna izquierda: Criterios */}
-          <div className="space-y-4">
-            <Card className="shadow-lg border-2">
-              <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/30">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <div className="h-8 w-1 bg-primary rounded-full"></div>
-                  {rubric.name}
-                </CardTitle>
+        {/* Score Dashboard */}
+        <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 shadow-2xl">
+          <CardContent className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <Award className="h-8 w-8 mx-auto mb-2 opacity-80" />
+                <div className="text-sm opacity-90 mb-1">Puntuación Total</div>
+                <div className="text-5xl font-bold">{totalScore}</div>
+                <div className="text-xl opacity-75">de {maxScore}</div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-sm opacity-90 mb-3">Promedio</div>
+                <div className="text-6xl font-bold">{averageScore.toFixed(1)}</div>
+                <div className="text-sm opacity-75 mt-2">sobre 5.0</div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-sm opacity-90 mb-3">Progreso</div>
+                <div className="text-5xl font-bold">{evaluatedCount}</div>
+                <div className="text-xl opacity-75">de {rubric.criteria.length} criterios</div>
+                <Progress value={progressPercentage} className="h-2 mt-3 bg-white/20" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Evaluación Principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          
+          {/* Panel de Evaluación (Columna Principal) */}
+          <div className="lg:col-span-3 space-y-6">
+            
+            {/* Navegación del Criterio */}
+            <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-xl p-4 shadow-lg border-2 border-slate-200 dark:border-slate-800">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={goToPreviousCriterion}
+                disabled={currentCriterionIndex === 0}
+                className="gap-2"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                Anterior
+              </Button>
+              
+              <div className="text-center px-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Criterio</div>
+                <div className="text-2xl font-bold text-primary">
+                  {currentCriterionIndex + 1} / {rubric.criteria.length}
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={goToNextCriterion}
+                disabled={currentCriterionIndex === rubric.criteria.length - 1}
+                className="gap-2"
+              >
+                Siguiente
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Card del Criterio Actual */}
+            <Card className="shadow-2xl border-2 border-slate-300 dark:border-slate-700">
+              <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b-2">
+                <div className="flex items-start justify-between gap-4">
+                  <CardTitle className="text-2xl leading-tight">{currentCriterion.name}</CardTitle>
+                  {currentScore !== null && currentScore !== undefined && (
+                    <Badge className="text-xl px-4 py-2 shrink-0 bg-green-600">
+                      ★ {currentScore}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="pt-4 space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto">
-                {rubric.criteria.map((criterion, index) => (
-                  <div key={criterion.id} className="space-y-2">
-                    {index > 0 && <Separator className="my-4" />}
+              
+              <CardContent className="p-8">
+                <div className="space-y-3">
+                  {[0, 1, 2, 3, 4, 5].map((scoreValue) => {
+                    const isSelected = currentScore === scoreValue;
                     
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-base flex-1">{criterion.name}</h3>
-                      <Badge variant={control._formValues.scores[criterion.id] !== undefined ? "default" : "secondary"} className="shrink-0">
-                        {control._formValues.scores[criterion.id] !== undefined ? control._formValues.scores[criterion.id] : '—'} / 5
-                      </Badge>
-                    </div>
-                    
-                    {errors.scores?.[criterion.id] && (
-                      <p className="text-xs text-destructive flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        {(errors.scores as any)[criterion.id].message}
-                      </p>
-                    )}
-                    
-                    <Controller
-                      name={`scores.${criterion.id}`}
-                      control={control}
-                      render={({ field }) => (
-                        <RadioGroup
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          value={field.value !== undefined ? String(field.value) : ''}
-                          className="grid grid-cols-6 gap-2"
-                        >
-                          {criterion.descriptions.map((desc, score) => {
-                            const radioId = `${criterion.id}-${score}`;
-                            return (
-                              <div key={score}>
-                                <RadioGroupItem 
-                                  value={String(score)} 
-                                  id={radioId} 
-                                  className="peer sr-only" 
-                                />
-                                <Label
-                                  htmlFor={radioId}
-                                  className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-white dark:bg-slate-900 p-3 hover:bg-primary/5 hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 cursor-pointer transition-all group relative h-20"
-                                  title={desc}
-                                >
-                                  <span className="text-2xl font-bold text-primary group-hover:scale-110 transition-transform">{score}</span>
-                                  <span className="text-[10px] text-center text-muted-foreground line-clamp-2 mt-1">{desc}</span>
-                                </Label>
-                              </div>
-                            );
-                          })}
-                        </RadioGroup>
-                      )}
-                    />
-                  </div>
-                ))}
+                    return (
+                      <button
+                        key={`${currentCriterion.id}-${scoreValue}`}
+                        type="button"
+                        onClick={() => handleScoreSelect(currentCriterion.id, scoreValue)}
+                        className={`
+                          w-full p-5 rounded-xl border-2 text-left transition-all duration-200
+                          flex items-start gap-4 group hover:shadow-lg
+                          ${isSelected 
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-lg ring-2 ring-blue-500 ring-offset-2' 
+                            : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                          }
+                        `}
+                      >
+                        <div className={`
+                          shrink-0 w-16 h-16 rounded-lg flex items-center justify-center text-3xl font-bold
+                          ${isSelected 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600'
+                          }
+                        `}>
+                          {scoreValue}
+                        </div>
+                        
+                        <div className="flex-1 pt-2">
+                          <p className={`text-base leading-relaxed ${isSelected ? 'font-medium text-blue-900 dark:text-blue-100' : 'text-slate-700 dark:text-slate-300'}`}>
+                            {currentCriterion.descriptions[scoreValue]}
+                          </p>
+                        </div>
+                        
+                        {isSelected && (
+                          <div className="shrink-0">
+                            <Check className="h-8 w-8 text-blue-500" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Columna derecha: Comentarios y acciones */}
-          <div className="space-y-4">
-            <Card className="shadow-lg border-2">
-              <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-                <CardTitle className="text-lg">Comentarios y Retroalimentación</CardTitle>
-                <CardDescription className="text-xs">Proporciona contexto adicional para tu evaluación</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <Controller
-                  name="comments"
-                  control={control}
-                  render={({ field }) => (
-                    <Textarea 
-                      {...field} 
-                      rows={8}
-                      placeholder="Escribe tus observaciones generales, fortalezas del equipo, áreas de mejora..."
-                      className="resize-none text-sm"
-                    />
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Información del proyecto */}
-            <Card className="shadow-lg border-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50">
+          {/* Sidebar */}
+          <div className="space-y-6">
+            
+            {/* Vista Rápida de Criterios */}
+            <Card className="shadow-xl border-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Info className="h-4 w-4 text-amber-600" />
-                  Descripción del Proyecto
-                </CardTitle>
+                <CardTitle className="text-base">Todos los Criterios</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">{project.description}</p>
+              <CardContent className="space-y-2">
+                {rubric.criteria.map((criterion, index) => {
+                  const criterionScore = scores[criterion.id];
+                  const isEvaluated = criterionScore !== null && criterionScore !== undefined;
+                  const isCurrent = index === currentCriterionIndex;
+                  
+                  return (
+                    <button
+                      key={`nav-${criterion.id}`}
+                      type="button"
+                      onClick={() => setCurrentCriterionIndex(index)}
+                      className={`
+                        w-full p-3 rounded-lg text-left transition-all flex items-center justify-between
+                        ${isCurrent 
+                          ? 'bg-blue-500 text-white shadow-lg' 
+                          : isEvaluated
+                            ? 'bg-green-100 dark:bg-green-950/30 border border-green-300 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/40'
+                            : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }
+                      `}
+                    >
+                      <span className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>
+                        {index + 1}. {criterion.name}
+                      </span>
+                      <Badge variant={isCurrent ? "secondary" : "outline"} className={`ml-2 shrink-0 ${isCurrent ? 'bg-white/20 text-white border-white/30' : ''}`}>
+                        {isEvaluated ? criterionScore : '—'}
+                      </Badge>
+                    </button>
+                  );
+                })}
               </CardContent>
             </Card>
 
-            {/* Resumen de progreso */}
-            <Card className="shadow-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Progreso de Evaluación</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-primary">{evaluatedCount}</div>
-                    <div className="text-xs text-muted-foreground">Evaluados</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
-                    <div className="text-xs text-muted-foreground">Pendientes</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">{averageScore.toFixed(1)}</div>
-                    <div className="text-xs text-muted-foreground">Promedio</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Botón de guardar destacado */}
-            <Card className="shadow-lg border-2 border-primary/20">
-              <CardContent className="pt-6">
+            {/* Botón de Guardar */}
+            <Card className="shadow-xl border-2 border-blue-200 dark:border-blue-900">
+              <CardContent className="p-6">
                 <Button 
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isSubmitting || !isDirty} 
-                  className="w-full h-12 text-base font-semibold shadow-lg"
+                  className="w-full h-14 text-base font-bold shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                   size="lg"
                 >
                   {isSubmitting ? (
@@ -397,7 +447,7 @@ export default function EvaluationPage() {
                   )}
                 </Button>
                 {!isDirty && (
-                  <p className="text-sm text-green-600 dark:text-green-400 flex items-center justify-center gap-2 mt-3">
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center justify-center gap-2 mt-3">
                     <Check className="h-4 w-4" />
                     Todos los cambios guardados
                   </p>
@@ -405,7 +455,7 @@ export default function EvaluationPage() {
               </CardContent>
             </Card>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
