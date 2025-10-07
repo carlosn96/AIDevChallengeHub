@@ -18,7 +18,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group, type Rubric } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group, type Rubric, type Evaluation } from './db-types';
 import { type UserRole, getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -651,7 +651,7 @@ export const updateUserProfile = async (uid: string, data: { displayName?: strin
 };
 
 export const deleteUserAccount = async (uid: string) => {
-    if (!db) throw new Error("Firestore not initialized.");
+    if (!db) throw new Error("Firestore is not initialized.");
 
     const userDocRef = doc(db, 'users', uid);
     // This is a soft delete. We will mark the user as deleted.
@@ -753,4 +753,40 @@ export const deleteRubric = async (rubricId: string) => {
   if (!db) throw new Error("Firestore is not initialized.");
   const rubricRef = doc(db, 'rubrics', rubricId);
   await deleteDoc(rubricRef);
+};
+
+// Evaluation Actions
+export const getEvaluation = async (teamId: string, projectId: string): Promise<Evaluation | null> => {
+  if (!db) return null;
+  const q = query(
+    collection(db, 'evaluations'),
+    where('teamId', '==', teamId),
+    where('projectId', '==', projectId),
+    limit(1)
+  );
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Evaluation;
+};
+
+export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> => {
+  if (!db) throw new Error("Firestore not initialized");
+
+  const dataToSave = {
+    ...evaluationData,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (evaluationData.id) {
+    const evalRef = doc(db, 'evaluations', evaluationData.id);
+    await updateDoc(evalRef, dataToSave);
+    return evaluationData.id;
+  } else {
+    const evalRef = collection(db, 'evaluations');
+    const newDoc = await addDoc(evalRef, {
+      ...dataToSave,
+      createdAt: serverTimestamp(),
+    });
+    return newDoc.id;
+  }
 };

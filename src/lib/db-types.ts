@@ -87,3 +87,20 @@ export type Rubric = {
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 };
+
+export type CriterionScore = {
+  criterionId: string;
+  score: number;
+};
+
+export type Evaluation = {
+  id: string;
+  teamId: string;
+  projectId: string;
+  rubricId: string;
+  evaluatorUid: string;
+  scores: CriterionScore[];
+  comments?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};

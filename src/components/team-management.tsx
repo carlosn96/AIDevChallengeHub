@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Team, type UserProfile, type Project, type Activity, type Group, type Rubric } from '@/lib/db-types';
 import { assignProjectToTeam, removeUserFromTeam, deleteTeam, assignActivitiesToTeam, reassignUserToTeam, assignRubricToTeam } from '@/lib/user-actions';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock, Link as LinkIcon, FileCheck } from 'lucide-react';
+import { Users, Search, Trash2, Loader2, AlertTriangle, UserX, ListChecks, FolderKanban, ChevronRight, Group as GroupIcon, CheckCircle, Clock, Link as LinkIcon, FileCheck, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Combobox } from '@/components/ui/combobox';
 import { Button } from './ui/button';
@@ -548,34 +548,46 @@ export default function TeamManagement({ teams, users, projects, activities, gro
               <Separator />
               
               <DialogFooter className="flex-col sm:flex-row gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={isProcessing} className="w-full sm:w-auto">
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete Team
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
-                    <AlertDialogHeader>
-                      <div className="p-3 rounded-full bg-destructive/10 w-fit mb-2">
-                        <AlertTriangle className="h-6 w-6 text-destructive" />
-                      </div>
-                      <AlertDialogTitle>Delete "{teamDetails.name}"?</AlertDialogTitle>
-                      <AlertDialogDescription className="text-xs md:text-sm">
-                        This will permanently delete the team. All members will be unassigned and available for re-assignment. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                      <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
-                        onClick={() => handleDeleteTeam(teamDetails.id)}
-                      >
-                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                        Delete Team
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex-1 flex gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={isProcessing} className="w-full sm:w-auto">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Team
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
+                        <AlertDialogHeader>
+                          <div className="p-3 rounded-full bg-destructive/10 w-fit mb-2">
+                            <AlertTriangle className="h-6 w-6 text-destructive" />
+                          </div>
+                          <AlertDialogTitle>Delete "{teamDetails.name}"?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-xs md:text-sm">
+                            This will permanently delete the team. All members will be unassigned and available for re-assignment. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                          <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
+                            onClick={() => handleDeleteTeam(teamDetails.id)}
+                          >
+                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Delete Team
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    {teamDetails.projectId && teamDetails.rubricId && (
+                        <Link href={`/dashboard/evaluation/${teamDetails.id}`} legacyBehavior>
+                           <a target="_blank">
+                                <Button variant="outline" className="w-full sm:w-auto">
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Evaluate
+                                </Button>
+                           </a>
+                        </Link>
+                    )}
+                </div>
                 <DialogClose asChild>
                   <Button type="button" variant="outline" className="w-full sm:w-auto">
                     Close
