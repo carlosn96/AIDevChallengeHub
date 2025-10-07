@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { getAllEvaluations } from '@/lib/user-actions';
 import { type Evaluation, type Team, type Project } from '@/lib/db-types';
-import { Loader2, Trophy, Award, Users, GitMerge } from 'lucide-react';
+import { Loader2, Trophy, Award, Users, GitMerge, Info } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 type EvaluationResultsProps = {
   teams: Team[];
@@ -61,7 +62,7 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
         teamId: teamId,
         teamName: teamsMap.get(teamId) || 'Unknown Team',
         projectName: projectsMap.get(data.projectId) || 'Unknown Project',
-        averageScore: data.totalScore / data.count,
+        averageScore: data.count > 0 ? data.totalScore / data.count : 0,
         evaluationCount: data.count,
       };
     }).sort((a, b) => b.averageScore - a.averageScore);
@@ -106,96 +107,108 @@ export default function EvaluationResults({ teams, projects }: EvaluationResults
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-lg border border-primary/20">
-              <Trophy className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle>Evaluation Results</CardTitle>
-              <CardDescription>View the final scores and standings.</CardDescription>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-primary/10 rounded-lg border border-primary/20">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Evaluation Results</CardTitle>
+                <CardDescription>View the final scores and standings.</CardDescription>
+              </div>
             </div>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Award className="mr-2 h-4 w-4" /> View Leaderboard
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Top 3 Teams</DialogTitle>
-                <DialogDescription>The highest average scores from all evaluations.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                {topThree.length === 0 && <p className="text-center text-muted-foreground">No evaluations to rank yet.</p>}
-                {topThree.map((team, index) => (
-                  <div key={team.teamId} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                    <Award className={`h-8 w-8 ${getPlaceColor(index + 1)}`} />
-                    <div className="flex-1">
-                      <p className="font-bold text-lg">{team.teamName}</p>
-                      <p className="text-sm text-muted-foreground">Project: {team.projectName}</p>
-                    </div>
-                    <div className="text-right">
-                       <p className="text-2xl font-bold">{team.averageScore.toFixed(2)}</p>
-                       <p className="text-xs text-muted-foreground">Avg Points</p>
-                    </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {teamResults.map((result) => (
+              <Card key={result.teamId}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      {result.teamName}
+                  </CardTitle>
+                  <CardDescription>Project: {result.projectName}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center bg-muted p-4 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Average Score ({result.evaluationCount} eval{result.evaluationCount > 1 ? 's' : ''})</p>
+                      <p className="text-4xl font-bold">{result.averageScore.toFixed(2)}</p>
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {teamResults.length === 0 && (
+              <div className="text-center text-muted-foreground py-12">
+                  <p>No evaluations have been completed yet.</p>
               </div>
-              {ties.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="py-4">
-                    <h3 className="font-semibold mb-3 flex items-center gap-2"><GitMerge />Tied Scores</h3>
-                    <div className="space-y-3">
-                      {ties.map((tieGroup, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
-                          <p className="font-bold mb-2">Tied with an average of {tieGroup[0].averageScore.toFixed(2)} points:</p>
-                          <ul className="list-disc list-inside text-sm text-muted-foreground">
-                            {tieGroup.map(team => <li key={team.teamId}>{team.teamName}</li>)}
-                          </ul>
-                        </div>
-                      ))}
+          )}
+        </CardContent>
+        <CardFooter className="flex-col sm:flex-row gap-4 items-start pt-6">
+           <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  <Award className="mr-2 h-4 w-4" /> View Leaderboard
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Top 3 Teams</DialogTitle>
+                  <DialogDescription>The highest average scores from all evaluations.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {topThree.length === 0 && <p className="text-center text-muted-foreground">No evaluations to rank yet.</p>}
+                  {topThree.map((team, index) => (
+                    <div key={team.teamId} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+                      <Award className={`h-8 w-8 ${getPlaceColor(index + 1)}`} />
+                      <div className="flex-1">
+                        <p className="font-bold text-lg">{team.teamName}</p>
+                        <p className="text-sm text-muted-foreground">Project: {team.projectName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">{team.averageScore.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Avg Points</p>
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-              <DialogFooter>
-                  <p className="text-xs text-muted-foreground">Results based on {evaluations.length} completed evaluations across all teams.</p>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {teamResults.map((result) => (
-            <Card key={result.teamId}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    {result.teamName}
-                </CardTitle>
-                <CardDescription>Project: {result.projectName}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center bg-muted p-4 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Average Score ({result.evaluationCount} eval{result.evaluationCount > 1 ? 's' : ''})</p>
-                    <p className="text-4xl font-bold">{result.averageScore.toFixed(2)}</p>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-         </div>
-         {teamResults.length === 0 && (
-            <div className="text-center text-muted-foreground py-12">
-                <p>No evaluations have been completed yet.</p>
-            </div>
-         )}
-      </CardContent>
-    </Card>
+                {ties.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="py-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2"><GitMerge />Tied Scores</h3>
+                      <div className="space-y-3">
+                        {ties.map((tieGroup, index) => (
+                          <div key={index} className="p-3 border rounded-lg">
+                            <p className="font-bold mb-2">Tied with an average of {tieGroup[0].averageScore.toFixed(2)} points:</p>
+                            <ul className="list-disc list-inside text-sm text-muted-foreground">
+                              {tieGroup.map(team => <li key={team.teamId}>{team.teamName}</li>)}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <DialogFooter>
+                    <p className="text-xs text-muted-foreground">Results based on {evaluations.length} completed evaluations across all teams.</p>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Alert className="w-full sm:flex-1">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Note</AlertTitle>
+              <AlertDescription>
+                Scores are averaged across all evaluations submitted by Managers and Teachers.
+              </AlertDescription>
+            </Alert>
+        </CardFooter>
+      </Card>
+    </>
   );
 }
