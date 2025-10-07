@@ -35,7 +35,6 @@ const rubricFormSchema = z.object({
 });
 
 const defaultDescriptions = Array(6).fill('');
-const defaultCriterion = { id: uuidv4(), name: '', descriptions: defaultDescriptions };
 
 export default function RubricManagement({ rubrics }: RubricManagementProps) {
   const { toast } = useToast();
@@ -47,7 +46,7 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
 
   const form = useForm<z.infer<typeof rubricFormSchema>>({
     resolver: zodResolver(rubricFormSchema),
-    defaultValues: { name: '', criteria: [defaultCriterion] },
+    defaultValues: { name: '', criteria: [{ id: uuidv4(), name: '', descriptions: defaultDescriptions }] },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -61,7 +60,7 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
       form.reset({ name: rubric.name, criteria: rubric.criteria });
     } else {
       setEditingRubric(null);
-      form.reset({ name: '', criteria: [defaultCriterion] });
+      form.reset({ name: '', criteria: [{ id: uuidv4(), name: '', descriptions: defaultDescriptions }] });
     }
     setIsFormDialogOpen(true);
   };
@@ -253,7 +252,14 @@ export default function RubricManagement({ rubrics }: RubricManagementProps) {
                 </p>
               )}
               
-              <Button type="button" variant="outline" size="sm" onClick={() => append(defaultCriterion)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  append({ id: uuidv4(), name: '', descriptions: defaultDescriptions })
+                }
+              >
                 <Plus className="mr-2 h-4 w-4" /> Add Criterion
               </Button>
 
