@@ -72,3 +72,17 @@ export type LoginSettings = {
   enabled: boolean;
   disabledMessage: string;
 };
+
+export type RubricCriterion = {
+  id: string;
+  name: string;
+  maxScore: number;
+};
+
+export type Rubric = {
+  id: string;
+  name: string;
+  criteria: RubricCriterion[];
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+};

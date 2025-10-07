@@ -18,7 +18,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
-import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group } from './db-types';
+import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group, type Rubric } from './db-types';
 import { type UserRole, getUserRole } from './roles';
 
 const MAX_TEAM_MEMBERS = 3;
@@ -719,4 +719,29 @@ export const createGroup = async (group: Omit<Group, 'id' | 'createdAt' | 'updat
     });
   };
 
-    
+// Rubric Actions
+export const createRubric = async (data: Omit<Rubric, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const collectionRef = collection(db, 'rubrics');
+  const newDocRef = await addDoc(collectionRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return newDocRef.id;
+};
+
+export const updateRubric = async (rubricId: string, data: Partial<Omit<Rubric, 'id'>>) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const rubricRef = doc(db, 'rubrics', rubricId);
+  await updateDoc(rubricRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const deleteRubric = async (rubricId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  const rubricRef = doc(db, 'rubrics', rubricId);
+  await deleteDoc(rubricRef);
+};

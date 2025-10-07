@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase } from 'lucide-react';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase, FileCheck } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity, type Group as GroupType } from '@/lib/db-types';
+import { type Team, type UserProfile, type Project, type ScheduleEvent, type Day, type LoginSettings, type Activity, type Group as GroupType, type Rubric } from '@/lib/db-types';
 import TeamManagement from './team-management';
 import TeamCrudManagement from './team-crud-management';
 import ProjectManagement from './project-management';
@@ -20,6 +20,7 @@ import ScheduleManagement from './schedule-management';
 import SettingsManagement from './settings-management';
 import ActivityManagement from './activity-management';
 import GroupManagement from './group-management';
+import RubricManagement from './rubric-management';
 
 
 export default function ManagerDashboard() {
@@ -30,6 +31,7 @@ export default function ManagerDashboard() {
   const [days, setDays] = useState<Day[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [groups, setGroups] = useState<GroupType[]>([]);
+  const [rubrics, setRubrics] = useState<Rubric[]>([]);
   const [loginSettings, setLoginSettings] = useState<LoginSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('teams');
@@ -41,7 +43,7 @@ export default function ManagerDashboard() {
     };
 
     const unsubscribes: (() => void)[] = [];
-    let loadingCounter = 8; // Increased to 8 for groups
+    let loadingCounter = 9; // Now 9 for rubrics
     const onDataLoaded = () => {
         loadingCounter--;
         if (loadingCounter === 0) {
@@ -84,6 +86,11 @@ export default function ManagerDashboard() {
         onDataLoaded();
     }, () => onDataLoaded()));
 
+    unsubscribes.push(onSnapshot(query(collection(db, 'rubrics'), orderBy('createdAt', 'desc')), (snapshot) => {
+        setRubrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rubric)));
+        onDataLoaded();
+    }, () => onDataLoaded()));
+
     unsubscribes.push(onSnapshot(doc(db, 'settings', 'login'), (snapshot) => {
         if (snapshot.exists()) {
             setLoginSettings(snapshot.data() as LoginSettings);
@@ -113,6 +120,7 @@ export default function ManagerDashboard() {
     { value: 'projects', label: 'Projects', icon: FolderKanban },
     { value: 'activities', label: 'Activities', icon: ListChecks },
     { value: 'groups', label: 'Groups', icon: Group },
+    { value: 'rubrics', label: 'Rubrics', icon: FileCheck },
     { value: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -151,7 +159,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Desktop: Tabs */}
-        <TabsList className="hidden md:grid w-full grid-cols-7 h-12 mb-6">
+        <TabsList className="hidden md:grid w-full grid-cols-8 h-12 mb-6">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2 h-5 w-5" />
             Team Assignments
@@ -176,6 +184,10 @@ export default function ManagerDashboard() {
             <Group className="mr-2 h-5 w-5" />
             Groups
           </TabsTrigger>
+          <TabsTrigger value="rubrics" className="h-full">
+            <FileCheck className="mr-2 h-5 w-5" />
+            Rubrics
+          </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
             <Settings className="mr-2 h-5 w-5" />
             Settings
@@ -199,6 +211,9 @@ export default function ManagerDashboard() {
         </TabsContent>
         <TabsContent value="groups" className="mt-0">
             <GroupManagement groups={groups} users={users} />
+        </TabsContent>
+        <TabsContent value="rubrics" className="mt-0">
+            <RubricManagement rubrics={rubrics} />
         </TabsContent>
         <TabsContent value="settings" className="mt-0">
             <SettingsManagement settings={loginSettings} />
