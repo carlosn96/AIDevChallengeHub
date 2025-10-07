@@ -20,6 +20,72 @@ import {
 import { type User, updateProfile as updateAuthProfile, deleteUser as deleteAuthUser } from 'firebase/auth';
 import { type UserProfile, type Team, type ScheduleEvent, type Project, type Day, type LoginSettings, type Activity, type Group, type Rubric, type Evaluation } from './db-types';
 import { type UserRole, getUserRole } from './roles';
+import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * TEMPORARY MIGRATION FUNCTION
+ * Updates all criteria in all rubrics to have unique IDs.
+ * This also updates corresponding evaluations to use the new criterion IDs.
+ */
+export const TEMPORARY_migrateRubricIds = async (): Promise<{rubricsUpdated: number, evaluationsUpdated: number}> => {
+  if (!db) throw new Error("Firestore is not initialized.");
+  
+  const rubricsRef = collection(db, 'rubrics');
+  const rubricsSnapshot = await getDocs(rubricsRef);
+  let rubricsUpdated = 0;
+  let evaluationsUpdated = 0;
+
+  for (const rubricDoc of rubricsSnapshot.docs) {
+    const rubric = { id: rubricDoc.id, ...rubricDoc.data() } as Rubric;
+    let needsUpdate = false;
+    const idMap = new Map<string, string>(); // Maps old ID to new ID
+
+    const updatedCriteria = rubric.criteria.map(criterion => {
+      // Check if ID is already a UUID. If not, it needs migration.
+      // A simple check is to see if it has the standard UUID length and hyphens.
+      // This isn't foolproof but good enough for this migration.
+      if (criterion.id.length < 36 || !criterion.id.includes('-')) {
+        const newId = uuidv4();
+        idMap.set(criterion.id, newId);
+        needsUpdate = true;
+        return { ...criterion, id: newId };
+      }
+      return criterion;
+    });
+
+    if (needsUpdate) {
+      const batch = writeBatch(db);
+
+      // 1. Update the rubric itself with the new criteria IDs
+      batch.update(rubricDoc.ref, { criteria: updatedCriteria });
+      rubricsUpdated++;
+
+      // 2. Find and update all evaluations that use this rubric
+      const evaluationsQuery = query(collection(db, 'evaluations'), where('rubricId', '==', rubric.id));
+      const evaluationsSnapshot = await getDocs(evaluationsQuery);
+
+      evaluationsSnapshot.forEach(evalDoc => {
+        const evaluation = evalDoc.data() as Evaluation;
+        const updatedScores = evaluation.scores.map(score => {
+          const newCriterionId = idMap.get(score.criterionId);
+          if (newCriterionId) {
+            return { ...score, criterionId: newCriterionId };
+          }
+          return score;
+        });
+        batch.update(evalDoc.ref, { scores: updatedScores });
+        evaluationsUpdated++;
+      });
+      
+      await batch.commit();
+      console.log(`Migrated rubric ${rubric.id} and its ${evaluationsSnapshot.size} evaluations.`);
+    }
+  }
+
+  console.log(`Migration complete. Updated ${rubricsUpdated} rubrics and ${evaluationsUpdated} evaluations.`);
+  return { rubricsUpdated, evaluationsUpdated };
+};
+
 
 const MAX_TEAM_MEMBERS = 3;
 
