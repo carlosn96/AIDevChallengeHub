@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -113,14 +114,14 @@ export default function ManagerDashboard() {
       id: 'teams', 
       label: 'Team Assignments', 
       icon: Users, 
-      color: 'from-blue-500 to-cyan-500',
+      color: 'from-primary to-accent',
       description: 'Assign members to teams'
     },
     { 
       id: 'teams-crud', 
       label: 'Team Administration', 
       icon: Briefcase, 
-      color: 'from-purple-500 to-pink-500',
+      color: 'from-secondary to-pink-400',
       description: 'Create and manage teams'
     },
     { 
@@ -134,7 +135,7 @@ export default function ManagerDashboard() {
       id: 'projects', 
       label: 'Projects', 
       icon: FolderKanban, 
-      color: 'from-orange-500 to-red-500',
+      color: 'from-orange-500 to-amber-500',
       description: 'Oversee all projects'
     },
     { 
@@ -155,21 +156,21 @@ export default function ManagerDashboard() {
       id: 'rubrics', 
       label: 'Rubrics', 
       icon: FileCheck, 
-      color: 'from-amber-500 to-orange-500',
+      color: 'from-purple-500 to-violet-500',
       description: 'Setup evaluation rubrics'
     },
     { 
       id: 'results', 
       label: 'Results', 
       icon: Trophy, 
-      color: 'from-yellow-500 to-amber-500',
+      color: 'from-yellow-400 to-orange-500',
       description: 'View evaluation results'
     },
     { 
       id: 'settings', 
       label: 'Settings', 
       icon: Settings, 
-      color: 'from-gray-500 to-slate-500',
+      color: 'from-slate-500 to-gray-500',
       description: 'System configuration'
     },
   ];
