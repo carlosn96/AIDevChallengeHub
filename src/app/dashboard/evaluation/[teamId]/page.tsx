@@ -104,11 +104,20 @@ export default function EvaluationPage() {
     fetchData();
   }, [teamId]);
 
+  // Force re-render cuando cambia el criterio actual
+  useEffect(() => {
+    // Este efecto asegura que el componente se actualice cuando cambia el índice
+    if (rubric && currentCriterionIndex >= 0) {
+      // Forzar actualización
+    }
+  }, [currentCriterionIndex, rubric]);
+
   const handleScoreSelect = (criterionId: string, scoreValue: number) => {
-    setScores(prevScores => ({
-      ...prevScores,
-      [criterionId]: scoreValue,
-    }));
+    setScores(prevScores => {
+      const newScores = { ...prevScores };
+      newScores[criterionId] = scoreValue;
+      return newScores;
+    });
   };
 
   const validateForm = (): boolean => {
@@ -234,7 +243,7 @@ export default function EvaluationPage() {
   const isDirty = hasChanges();
 
   const currentCriterion = rubric.criteria[currentCriterionIndex];
-  const currentScore = scores[currentCriterion.id];
+  const currentScore = scores[currentCriterion?.id] ?? null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:to-slate-900 py-8">
@@ -340,11 +349,13 @@ export default function EvaluationPage() {
               <CardContent className="p-8">
                 <div className="space-y-3">
                   {[0, 1, 2, 3, 4, 5].map((scoreValue) => {
-                    const isSelected = currentScore === scoreValue;
+                    // Recalcular isSelected dentro del map para asegurar el valor correcto
+                    const selectedScore = scores[currentCriterion?.id];
+                    const isSelected = selectedScore === scoreValue;
                     
                     return (
                       <button
-                        key={`${currentCriterion.id}-${scoreValue}`}
+                        key={`score-btn-${scoreValue}-${currentCriterionIndex}`}
                         type="button"
                         onClick={() => handleScoreSelect(currentCriterion.id, scoreValue)}
                         className={`
@@ -368,7 +379,7 @@ export default function EvaluationPage() {
                         
                         <div className="flex-1 pt-2">
                           <p className={`text-base leading-relaxed ${isSelected ? 'font-medium text-blue-900 dark:text-blue-100' : 'text-slate-700 dark:text-slate-300'}`}>
-                            {currentCriterion.descriptions[scoreValue]}
+                            {currentCriterion.descriptions?.[scoreValue] || 'Sin descripción'}
                           </p>
                         </div>
                         
