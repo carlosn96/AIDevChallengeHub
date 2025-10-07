@@ -76,7 +76,7 @@ export type LoginSettings = {
 export type RubricCriterion = {
   id: string;
   name: string;
-  maxScore: number;
+  descriptions: string[]; // Index corresponds to score (0-5)
 };
 
 export type Rubric = {
