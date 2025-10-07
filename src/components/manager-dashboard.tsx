@@ -207,7 +207,7 @@ export default function ManagerDashboard() {
           {activeView === 'activities' && <ActivityManagement activities={activities} />}
           {activeView === 'groups' && <GroupManagement groups={groups} users={users} />}
           {activeView === 'rubrics' && <RubricManagement rubrics={rubrics} />}
-          {activeView === 'results' && <EvaluationResults teams={teams} projects={projects} />}
+          {activeView === 'results' && <EvaluationResults teams={teams} projects={projects} users={users} />}
           {activeView === 'settings' && <SettingsManagement settings={loginSettings} />}
         </div>
       </div>
