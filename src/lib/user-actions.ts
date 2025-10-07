@@ -1,3 +1,4 @@
+
 import { db, auth } from '@/lib/firebase';
 import { 
   doc,
@@ -37,49 +38,38 @@ export const TEMPORARY_migrateRubricIds = async (): Promise<{rubricsUpdated: num
 
   for (const rubricDoc of rubricsSnapshot.docs) {
     const rubric = { id: rubricDoc.id, ...rubricDoc.data() } as Rubric;
-    let needsUpdate = false;
     const idMap = new Map<string, string>(); // Maps old ID to new ID
 
+    // Force update all criteria IDs without validation
     const updatedCriteria = rubric.criteria.map(criterion => {
-      // Check if ID is already a UUID. If not, it needs migration.
-      // A simple check is to see if it has the standard UUID length and hyphens.
-      // This isn't foolproof but good enough for this migration.
-      if (criterion.id.length < 36 || !criterion.id.includes('-')) {
-        const newId = uuidv4();
-        idMap.set(criterion.id, newId);
-        needsUpdate = true;
-        return { ...criterion, id: newId };
-      }
-      return criterion;
+      const newId = uuidv4();
+      idMap.set(criterion.id, newId);
+      return { ...criterion, id: newId };
     });
 
-    if (needsUpdate) {
-      const batch = writeBatch(db);
+    const batch = writeBatch(db);
 
-      // 1. Update the rubric itself with the new criteria IDs
-      batch.update(rubricDoc.ref, { criteria: updatedCriteria });
-      rubricsUpdated++;
+    // 1. Update the rubric itself with the new criteria IDs
+    batch.update(rubricDoc.ref, { criteria: updatedCriteria });
+    rubricsUpdated++;
 
-      // 2. Find and update all evaluations that use this rubric
-      const evaluationsQuery = query(collection(db, 'evaluations'), where('rubricId', '==', rubric.id));
-      const evaluationsSnapshot = await getDocs(evaluationsQuery);
+    // 2. Find and update all evaluations that use this rubric
+    const evaluationsQuery = query(collection(db, 'evaluations'), where('rubricId', '==', rubric.id));
+    const evaluationsSnapshot = await getDocs(evaluationsQuery);
 
-      evaluationsSnapshot.forEach(evalDoc => {
-        const evaluation = evalDoc.data() as Evaluation;
-        const updatedScores = evaluation.scores.map(score => {
-          const newCriterionId = idMap.get(score.criterionId);
-          if (newCriterionId) {
-            return { ...score, criterionId: newCriterionId };
-          }
-          return score;
-        });
-        batch.update(evalDoc.ref, { scores: updatedScores });
-        evaluationsUpdated++;
+    evaluationsSnapshot.forEach(evalDoc => {
+      const evaluation = evalDoc.data() as Evaluation;
+      const updatedScores = evaluation.scores.map(score => {
+        const newCriterionId = idMap.get(score.criterionId);
+        // Use the new ID if a mapping exists, otherwise keep the old one (fallback, though all should be mapped)
+        return newCriterionId ? { ...score, criterionId: newCriterionId } : score;
       });
-      
-      await batch.commit();
-      console.log(`Migrated rubric ${rubric.id} and its ${evaluationsSnapshot.size} evaluations.`);
-    }
+      batch.update(evalDoc.ref, { scores: updatedScores });
+      evaluationsUpdated++;
+    });
+    
+    await batch.commit();
+    console.log(`Force-migrated rubric ${rubric.id} and its ${evaluationsSnapshot.size} evaluations.`);
   }
 
   console.log(`Migration complete. Updated ${rubricsUpdated} rubrics and ${evaluationsUpdated} evaluations.`);
