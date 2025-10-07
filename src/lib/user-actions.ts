@@ -780,7 +780,7 @@ export const getEvaluation = async (teamId: string, projectId: string, evaluator
   return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Evaluation;
 };
 
-export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> => {
+export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'createdAt' | 'updatedAt'>): Promise<string> => {
   if (!db) throw new Error("Firestore not initialized");
 
   const { id, ...data } = evaluationData;
@@ -802,4 +802,23 @@ export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'cr
     });
     return newDoc.id;
   }
+};
+
+export const deleteEvaluationsForTeam = async (teamId: string) => {
+  if (!db) throw new Error("Firestore is not initialized.");
+
+  const q = query(collection(db, "evaluations"), where("teamId", "==", teamId));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    console.log(`No evaluations found for team ${teamId}.`);
+    return;
+  }
+
+  const batch = writeBatch(db);
+  querySnapshot.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
 };

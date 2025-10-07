@@ -4,9 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getAllEvaluations } from '@/lib/user-actions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { deleteEvaluationsForTeam } from '@/lib/user-actions';
 import { type Evaluation, type Team, type Project, type UserProfile, type Rubric } from '@/lib/db-types';
-import { Loader2, Trophy, Award, Users, GitMerge, Info, User, Star, Eye } from 'lucide-react';
+import { Loader2, Trophy, Award, Users, GitMerge, Info, User, Star, Eye, Trash2, AlertTriangle } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -14,6 +15,7 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 type EvaluationResultsProps = {
   teams: Team[];
@@ -39,7 +41,9 @@ export default function EvaluationResults({ teams, projects, users }: Evaluation
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [rubrics, setRubrics] = useState<Map<string, Rubric>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTeamResult, setSelectedTeamResult] = useState<TeamResult | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     let unsubEvals: (() => void) | undefined;
@@ -127,6 +131,27 @@ export default function EvaluationResults({ teams, projects, users }: Evaluation
 
     return { topThree, ties };
   }, [teamResults]);
+
+  const handleClearEvaluations = async (teamId: string, teamName: string) => {
+    setIsProcessing(true);
+    try {
+      await deleteEvaluationsForTeam(teamId);
+      toast({
+        title: 'Evaluations Cleared',
+        description: `All evaluations for "${teamName}" have been deleted.`,
+      });
+      setSelectedTeamResult(null); // Close the dialog
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to clear evaluations for the team.',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
   
   if (isLoading) {
     return (
@@ -310,6 +335,40 @@ export default function EvaluationResults({ teams, projects, users }: Evaluation
                 })}
             </div>
           </ScrollArea>
+           <DialogFooter>
+            {selectedTeamResult && selectedTeamResult.evaluations.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={isProcessing}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All Evaluations
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertTriangle />
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all {selectedTeamResult.evaluationCount} evaluations for team "{selectedTeamResult.teamName}". This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => handleClearEvaluations(selectedTeamResult.teamId, selectedTeamResult.teamName)}
+                      disabled={isProcessing}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Yes, delete all evaluations
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
