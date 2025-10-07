@@ -115,7 +115,7 @@ export default function ManagerDashboard() {
 
   const tabItems = [
     { value: 'teams', label: 'Team Assignments', icon: Users },
-    { value: 'teams-crud', label: 'Teams CRUD', icon: Briefcase },
+    { value: 'teams-crud', label: 'Team Administration', icon: Briefcase },
     { value: 'schedule', label: 'Schedule', icon: Calendar },
     { value: 'projects', label: 'Projects', icon: FolderKanban },
     { value: 'activities', label: 'Activities', icon: ListChecks },
@@ -166,7 +166,7 @@ export default function ManagerDashboard() {
           </TabsTrigger>
            <TabsTrigger value="teams-crud" className="h-full">
             <Briefcase className="mr-2 h-5 w-5" />
-            Teams CRUD
+            Team Administration
           </TabsTrigger>
           <TabsTrigger value="schedule" className="h-full">
             <Calendar className="mr-2 h-5 w-5" />

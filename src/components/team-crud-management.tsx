@@ -161,7 +161,7 @@ export default function TeamCrudManagement({ teams, users }: TeamCrudManagementP
                 <Briefcase className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg md:text-xl">Team Administration (CRUD)</CardTitle>
+                <CardTitle className="text-lg md:text-xl">Team Administration</CardTitle>
                 <CardDescription className="text-xs md:text-sm">
                   Manually create, edit, and delete teams.
                 </CardDescription>
