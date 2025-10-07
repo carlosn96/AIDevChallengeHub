@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase, FileCheck } from 'lucide-react';
+import { Users, Calendar, FolderKanban, Loader2, Settings, ListChecks, Group, Briefcase, FileCheck, Trophy } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import SettingsManagement from './settings-management';
 import ActivityManagement from './activity-management';
 import GroupManagement from './group-management';
 import RubricManagement from './rubric-management';
+import EvaluationResults from './evaluation-results';
 
 
 export default function ManagerDashboard() {
@@ -121,6 +122,7 @@ export default function ManagerDashboard() {
     { value: 'activities', label: 'Activities', icon: ListChecks },
     { value: 'groups', label: 'Groups', icon: Group },
     { value: 'rubrics', label: 'Rubrics', icon: FileCheck },
+    { value: 'results', label: 'Results', icon: Trophy },
     { value: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -159,7 +161,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Desktop: Tabs */}
-        <TabsList className="hidden md:grid w-full grid-cols-8 h-12 mb-6">
+        <TabsList className="hidden md:grid w-full grid-cols-9 h-12 mb-6">
           <TabsTrigger value="teams" className="h-full">
             <Users className="mr-2 h-5 w-5" />
             Team Assignments
@@ -188,6 +190,10 @@ export default function ManagerDashboard() {
             <FileCheck className="mr-2 h-5 w-5" />
             Rubrics
           </TabsTrigger>
+          <TabsTrigger value="results" className="h-full">
+            <Trophy className="mr-2 h-5 w-5" />
+            Results
+          </TabsTrigger>
           <TabsTrigger value="settings" className="h-full">
             <Settings className="mr-2 h-5 w-5" />
             Settings
@@ -214,6 +220,9 @@ export default function ManagerDashboard() {
         </TabsContent>
         <TabsContent value="rubrics" className="mt-0">
             <RubricManagement rubrics={rubrics} />
+        </TabsContent>
+        <TabsContent value="results" className="mt-0">
+            <EvaluationResults teams={teams} projects={projects} />
         </TabsContent>
         <TabsContent value="settings" className="mt-0">
             <SettingsManagement settings={loginSettings} />

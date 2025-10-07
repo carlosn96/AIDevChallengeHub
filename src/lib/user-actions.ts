@@ -812,6 +812,14 @@ export const deleteRubric = async (rubricId: string) => {
 };
 
 // Evaluation Actions
+export const getAllEvaluations = async (): Promise<Evaluation[]> => {
+  if (!db) return [];
+  const evaluationsRef = collection(db, 'evaluations');
+  const snapshot = await getDocs(evaluationsRef);
+  if (snapshot.empty) return [];
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
+};
+
 export const getEvaluation = async (teamId: string, projectId: string): Promise<Evaluation | null> => {
   if (!db) return null;
   const q = query(
@@ -828,7 +836,6 @@ export const getEvaluation = async (teamId: string, projectId: string): Promise<
 export const saveEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> => {
   if (!db) throw new Error("Firestore not initialized");
 
-  // Destructure to separate the optional 'id' from the rest of the data
   const { id, ...data } = evaluationData;
 
   const dataToSave = {
