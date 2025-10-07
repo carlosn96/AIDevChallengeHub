@@ -578,7 +578,7 @@ export default function TeamManagement({ teams, users, projects, activities, gro
                       </AlertDialogContent>
                     </AlertDialog>
                     {teamDetails.projectId && teamDetails.rubricId && (
-                        <Link href={`/dashboard/evaluation/${teamDetails.id}`} target="_blank" passHref>
+                        <Link href={`/dashboard/evaluation/${teamDetails.id}`} passHref>
                             <Button variant="outline" className="w-full sm:w-auto">
                                 <Edit className="mr-2 h-4 w-4" />
                                 Evaluate

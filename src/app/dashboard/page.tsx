@@ -96,12 +96,10 @@ function TeacherEvaluationList() {
                                Rubric: {rubrics.get(team.rubricId!)?.name || '...'}
                              </p>
                            </div>
-                           <Link href={`/dashboard/evaluation/${team.id}`} passHref legacyBehavior>
-                                <a target="_blank" rel="noopener noreferrer">
-                                    <Button variant="outline">
-                                        <Edit className="mr-2 h-4 w-4" /> Evaluate
-                                    </Button>
-                                </a>
+                           <Link href={`/dashboard/evaluation/${team.id}`} passHref>
+                                <Button variant="outline">
+                                    <Edit className="mr-2 h-4 w-4" /> Evaluate
+                                </Button>
                            </Link>
                         </div>
                     ))}
