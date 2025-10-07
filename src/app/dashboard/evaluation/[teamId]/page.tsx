@@ -85,12 +85,10 @@ export default function EvaluationPage() {
         setEvaluation(existingEvaluation);
 
         const loadedScores: CriterionScoreState = {};
-        // First, initialize all scores from the rubric to null
         rubricData.criteria.forEach(c => {
             loadedScores[c.id] = null;
         });
 
-        // Then, if an evaluation exists, populate the scores
         if (existingEvaluation) {
           existingEvaluation.scores.forEach(s => {
             if (loadedScores.hasOwnProperty(s.criterionId)) {
@@ -115,6 +113,7 @@ export default function EvaluationPage() {
 
   const handleScoreChange = (criterionId: string, value: string) => {
     const score = value === '' ? null : parseInt(value, 10);
+    
     if (score !== null && (isNaN(score) || score < 0 || score > 5)) {
         toast({
             variant: 'destructive',
@@ -124,10 +123,11 @@ export default function EvaluationPage() {
         return;
     }
 
-    setScores(prevScores => ({
-      ...prevScores,
-      [criterionId]: score,
-    }));
+    setScores(prevScores => {
+        const newScores = { ...prevScores };
+        newScores[criterionId] = score;
+        return newScores;
+    });
   };
 
   const validateForm = (): boolean => {
